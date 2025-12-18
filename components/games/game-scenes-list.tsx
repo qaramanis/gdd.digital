@@ -52,7 +52,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
-import { SceneService, Scene } from "@/lib/scenes/scene-service";
+import {
+  getScenesByGame,
+  uploadScene,
+  linkExternalScene,
+  deleteScene,
+  type Scene,
+} from "@/lib/actions/scene-actions";
 import { toast } from "sonner";
 
 interface GameScenesListProps {
@@ -178,13 +184,13 @@ export default function GameScenesList({
 
   const fetchScenes = async () => {
     setLoading(true);
-    const { data, error } = await SceneService.getScenesByGame(gameId);
+    const { data, error } = await getScenesByGame(gameId);
 
     if (error) {
       toast.error("Failed to load scenes");
       console.error(error);
     } else if (data) {
-      setScenes(data);
+      setScenes(data as Scene[]);
     }
 
     setLoading(false);
@@ -206,25 +212,39 @@ export default function GameScenesList({
 
     setUploading(true);
 
-    const result = await SceneService.uploadScene(
-      gameId,
-      selectedFile,
-      {
-        name: sceneName,
-        description: sceneDescription,
-        engine: sceneEngine,
-      },
-      userId,
-    );
+    try {
+      // Convert File to array buffer for server action
+      const arrayBuffer = await selectedFile.arrayBuffer();
+      const buffer = Array.from(new Uint8Array(arrayBuffer));
 
-    if (result.success) {
-      toast.success("Scene uploaded successfully");
-      await fetchScenes();
-      setShowUploadDialog(false);
-      resetUploadForm();
-    } else {
+      const result = await uploadScene(
+        gameId,
+        {
+          buffer,
+          name: selectedFile.name,
+          type: selectedFile.type,
+          size: selectedFile.size,
+        },
+        {
+          name: sceneName,
+          description: sceneDescription,
+          engine: sceneEngine,
+        },
+        userId,
+      );
+
+      if (result.success) {
+        toast.success("Scene uploaded successfully");
+        await fetchScenes();
+        setShowUploadDialog(false);
+        resetUploadForm();
+      } else {
+        toast.error("Failed to upload scene");
+        console.error(result.error);
+      }
+    } catch (error) {
       toast.error("Failed to upload scene");
-      console.error(result.error);
+      console.error(error);
     }
 
     setUploading(false);
@@ -238,7 +258,7 @@ export default function GameScenesList({
 
     setUploading(true);
 
-    const { error } = await SceneService.linkExternalScene(
+    const { error } = await linkExternalScene(
       gameId,
       externalUrl,
       {
@@ -271,7 +291,7 @@ export default function GameScenesList({
   const handleDeleteScene = async (sceneId: string) => {
     if (!confirm("Are you sure you want to delete this scene?")) return;
 
-    const { error } = await SceneService.deleteScene(sceneId);
+    const { error } = await deleteScene(sceneId);
 
     if (error) {
       toast.error("Failed to delete scene");
@@ -297,7 +317,9 @@ export default function GameScenesList({
   };
 
   const uniqueEngines = Array.from(new Set(scenes.map((s) => s.engine)));
-  const uniqueStatuses = Array.from(new Set(scenes.map((s) => s.status).filter((s): s is string => s !== null)));
+  const uniqueStatuses = Array.from(
+    new Set(scenes.map((s) => s.status).filter((s): s is string => s !== null)),
+  );
 
   if (loading) {
     return (
@@ -521,8 +543,8 @@ export default function GameScenesList({
           />
         </div>
         <div className="flex gap-2">
-          <Select value={engineFilter} onValueChange={setEngineFilter}>
-            <SelectTrigger className="w-[140px]">
+          {/*<Select value={engineFilter} onValueChange={setEngineFilter}>
+            <SelectTrigger className="w-[160px]">
               <Filter className="mr-2 h-4 w-4" />
               <SelectValue placeholder="Engine" />
             </SelectTrigger>
@@ -534,10 +556,10 @@ export default function GameScenesList({
                 </SelectItem>
               ))}
             </SelectContent>
-          </Select>
+          </Select>*/}
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -662,7 +684,9 @@ export default function GameScenesList({
                       <div className="flex items-center gap-4 text-xs text-accent">
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {scene.updatedAt ? formatDate(scene.updatedAt.toISOString()) : "N/A"}
+                          {scene.updatedAt
+                            ? formatDate(typeof scene.updatedAt === "string" ? scene.updatedAt : scene.updatedAt.toISOString())
+                            : "N/A"}
                         </span>
                         {scene.fileSize && (
                           <span>{formatFileSize(scene.fileSize)}</span>
@@ -735,17 +759,16 @@ export default function GameScenesList({
                             Download
                           </DropdownMenuItem>
                         )}
-                        {scene.sceneUrl &&
-                          scene.storageType === "external" && (
-                            <DropdownMenuItem
-                              onClick={() =>
-                                window.open(scene.sceneUrl!, "_blank")
-                              }
-                            >
-                              <ExternalLink className="mr-2 h-4 w-4" />
-                              Open External
-                            </DropdownMenuItem>
-                          )}
+                        {scene.sceneUrl && scene.storageType === "external" && (
+                          <DropdownMenuItem
+                            onClick={() =>
+                              window.open(scene.sceneUrl!, "_blank")
+                            }
+                          >
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            Open External
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-destructive"

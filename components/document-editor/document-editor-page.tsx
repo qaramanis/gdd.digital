@@ -162,9 +162,6 @@ export default function DocumentEditorPage() {
   useEffect(() => {
     if (!userLoading && userId) {
       fetchDocumentData();
-    } else if (!userLoading && !userId) {
-      setLoading(false);
-      setError("Please sign in to edit this document");
     }
   }, [params.id, userId, userLoading]);
 
@@ -380,7 +377,7 @@ export default function DocumentEditorPage() {
     URL.revokeObjectURL(url);
   };
 
-  if (loading || userLoading) {
+  if (loading || userLoading || !userId) {
     return <DocumentEditorSkeleton />;
   }
 
@@ -389,14 +386,9 @@ export default function DocumentEditorPage() {
       <div className="flex flex-col items-center justify-center h-64">
         <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
         <p className="text-lg mb-4">{error}</p>
-        <div className="flex gap-2">
-          <Button onClick={() => router.push(`/games/${params.id}`)}>
-            Back to Game
-          </Button>
-          {error.includes("sign in") && (
-            <Button onClick={() => router.push("/sign-in")}>Sign In</Button>
-          )}
-        </div>
+        <Button onClick={() => router.push(`/games/${params.id}`)}>
+          Back to Game
+        </Button>
       </div>
     );
   }

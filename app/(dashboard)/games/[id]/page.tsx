@@ -52,9 +52,6 @@ export default function GamePage() {
   useEffect(() => {
     if (!userLoading && userId) {
       fetchGameData();
-    } else if (!userLoading && !userId) {
-      setLoading(false);
-      setError("Please sign in to view this game");
     }
   }, [params.id, userId, userLoading]);
 
@@ -81,7 +78,7 @@ export default function GamePage() {
     }
   };
 
-  if (loading || userLoading) {
+  if (loading || userLoading || !userId) {
     return <GameDetailSkeleton />;
   }
 
@@ -90,12 +87,7 @@ export default function GamePage() {
       <div className="flex flex-col items-center justify-center h-64">
         <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
         <p className="text-lg mb-4">{error}</p>
-        <div className="flex gap-2">
-          <Button onClick={() => router.push("/games")}>Back to Games</Button>
-          {error.includes("sign in") && (
-            <Button onClick={() => router.push("/sign-in")}>Sign In</Button>
-          )}
-        </div>
+        <Button onClick={() => router.push("/games")}>Back to Games</Button>
       </div>
     );
   }

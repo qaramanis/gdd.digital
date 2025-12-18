@@ -1,3 +1,5 @@
+import "server-only";
+
 import { db, schema } from "@/database/drizzle";
 import { eq, and, desc, sql, or } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";

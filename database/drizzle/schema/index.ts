@@ -4,3 +4,4 @@ export * from "./documents";
 export * from "./teams";
 export * from "./collaboration";
 export * from "./notifications";
+export * from "./gdd";

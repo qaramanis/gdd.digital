@@ -28,8 +28,6 @@ export default function ViewAllGamesPage() {
   useEffect(() => {
     if (!userLoading && userId) {
       loadGames();
-    } else if (!userLoading && !userId) {
-      setLoading(false);
     }
   }, [userId, userLoading]);
 
@@ -47,17 +45,8 @@ export default function ViewAllGamesPage() {
     }
   };
 
-  if (userLoading) {
+  if (userLoading || !userId) {
     return <LoadingSkeleton />;
-  }
-
-  if (!userId) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64">
-        <p className="text-lg mb-4">Please sign in to view your games</p>
-        <Button onClick={() => router.push("/sign-in")}>Sign In</Button>
-      </div>
-    );
   }
 
   return (

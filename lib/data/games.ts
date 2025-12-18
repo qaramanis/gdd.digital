@@ -1,5 +1,7 @@
+import "server-only";
+
 import { db, schema } from "@/database/drizzle";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 
 export interface GameData {
   name: string;
@@ -112,39 +114,3 @@ export async function deleteGame(gameId: string, userId: string) {
   return deleted;
 }
 
-/**
- * Check if user owns a game
- */
-export async function checkGamePermission(
-  gameId: string,
-  userId: string
-): Promise<boolean> {
-  const game = await db.query.games.findFirst({
-    where: and(eq(schema.games.id, gameId), eq(schema.games.userId, userId)),
-    columns: { id: true },
-  });
-  return !!game;
-}
-
-/**
- * Get game statistics for a user
- */
-export async function getUserGameStats(userId: string) {
-  const games = await db.query.games.findMany({
-    where: eq(schema.games.userId, userId),
-  });
-
-  const totalGames = games.length;
-
-  // Get document count
-  const documents = await db.query.documents.findMany({
-    where: eq(schema.documents.userId, userId),
-  });
-  const totalDocuments = documents.length;
-
-  return {
-    totalGames,
-    totalDocuments,
-    recentGames: games.slice(0, 5),
-  };
-}

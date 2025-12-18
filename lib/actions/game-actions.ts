@@ -1,8 +1,15 @@
 "use server";
 
-import { getUserGames, getGameForUser, getGame, updateGame as updateGameData, deleteGame as deleteGameData, createGame as createGameData, GameData } from "@/lib/data/games";
+import { getUserGames, getGameForUser, getGame, updateGame as updateGameData, createGame as createGameData, GameData } from "@/lib/data/games";
 import { getDocumentsByGame } from "@/lib/data/documents";
 import { uploadFile, deleteFile, BUCKETS } from "@/lib/storage/minio-client";
+
+// Helper to safely serialize dates that might be Date objects or strings
+function toISOStringOrEmpty(value: Date | string | null | undefined): string {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  return value.toISOString();
+}
 
 export async function fetchGameName(gameId: string) {
   try {
@@ -22,8 +29,8 @@ export async function fetchUserGames(userId: string) {
       name: g.name,
       concept: g.concept || "",
       imageUrl: g.imageUrl || null,
-      createdAt: g.createdAt?.toISOString() || "",
-      updatedAt: g.updatedAt?.toISOString() || "",
+      createdAt: toISOStringOrEmpty(g.createdAt),
+      updatedAt: toISOStringOrEmpty(g.updatedAt),
       platforms: g.platforms || [],
       sections: g.sections || [],
       startDate: g.startDate || null,
@@ -31,51 +38,6 @@ export async function fetchUserGames(userId: string) {
     }));
   } catch (error) {
     console.error("Error fetching user games:", error);
-    return [];
-  }
-}
-
-export async function fetchGameForUser(gameId: string, userId: string) {
-  try {
-    const game = await getGameForUser(gameId, userId);
-    if (!game) return null;
-
-    return {
-      id: game.id,
-      name: game.name,
-      concept: game.concept || "",
-      imageUrl: game.imageUrl || null,
-      createdAt: game.createdAt?.toISOString() || "",
-      updatedAt: game.updatedAt?.toISOString() || "",
-      platforms: game.platforms || [],
-      sections: game.sections || [],
-      startDate: game.startDate || null,
-      timeline: game.timeline || null,
-    };
-  } catch (error) {
-    console.error("Error fetching game:", error);
-    return null;
-  }
-}
-
-export async function fetchGameDocuments(gameId: string) {
-  try {
-    const docs = await getDocumentsByGame(gameId);
-    return docs.map((d) => ({
-      id: d.id,
-      title: d.title,
-      gameId: d.gameId,
-      createdAt: d.createdAt?.toISOString() || "",
-      updatedAt: d.updatedAt?.toISOString() || "",
-      isGameDocument: d.isGameDocument,
-      sections: d.sections?.map((s) => ({
-        id: s.id,
-        title: s.title,
-        orderIndex: s.orderIndex,
-      })) || [],
-    }));
-  } catch (error) {
-    console.error("Error fetching game documents:", error);
     return [];
   }
 }
@@ -111,16 +73,16 @@ export async function fetchGamePageData(gameId: string, userId: string) {
         sections: game.sections || [],
         start_date: game.startDate || "",
         timeline: game.timeline || "",
-        created_at: game.createdAt?.toISOString() || "",
-        updated_at: game.updatedAt?.toISOString() || "",
+        created_at: toISOStringOrEmpty(game.createdAt),
+        updated_at: toISOStringOrEmpty(game.updatedAt),
         user_id: game.userId,
       },
       document: document ? {
         id: document.id,
         game_id: document.gameId,
         title: document.title,
-        created_at: document.createdAt?.toISOString() || "",
-        updated_at: document.updatedAt?.toISOString() || "",
+        created_at: toISOStringOrEmpty(document.createdAt),
+        updated_at: toISOStringOrEmpty(document.updatedAt),
       } : null,
       sections,
       error: null,
@@ -128,26 +90,6 @@ export async function fetchGamePageData(gameId: string, userId: string) {
   } catch (error) {
     console.error("Error fetching game page data:", error);
     return { game: null, document: null, sections: [], error: "Failed to load game data" };
-  }
-}
-
-export async function updateGame(gameId: string, userId: string, data: Partial<GameData>) {
-  try {
-    const updated = await updateGameData(gameId, userId, data);
-    return { success: true, game: updated };
-  } catch (error) {
-    console.error("Error updating game:", error);
-    return { success: false, error: "Failed to update game" };
-  }
-}
-
-export async function deleteGame(gameId: string, userId: string) {
-  try {
-    await deleteGameData(gameId, userId);
-    return { success: true };
-  } catch (error) {
-    console.error("Error deleting game:", error);
-    return { success: false, error: "Failed to delete game" };
   }
 }
 
@@ -223,8 +165,8 @@ export async function updateGameWithImage(
       game: {
         ...savedGame,
         imageUrl: savedGame.imageUrl,
-        createdAt: savedGame.createdAt?.toISOString(),
-        updatedAt: savedGame.updatedAt?.toISOString(),
+        createdAt: toISOStringOrEmpty(savedGame.createdAt),
+        updatedAt: toISOStringOrEmpty(savedGame.updatedAt),
       },
     };
   } catch (error) {

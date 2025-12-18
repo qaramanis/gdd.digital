@@ -1,3 +1,5 @@
+import "server-only";
+
 import {
   uploadScene as uploadSceneData,
   getScenesByGame as getScenesByGameData,

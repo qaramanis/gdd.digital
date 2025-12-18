@@ -1,3 +1,5 @@
+import "server-only";
+
 // Data Access Layer
 // Central export for all data access functions
 

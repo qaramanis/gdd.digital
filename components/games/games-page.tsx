@@ -46,8 +46,6 @@ export default function GamesPage() {
   useEffect(() => {
     if (!userLoading && userId) {
       fetchGamesAndStats();
-    } else if (!userLoading && !userId) {
-      setLoading(false);
     }
   }, [userId, userLoading]);
 
@@ -111,7 +109,7 @@ export default function GamesPage() {
     return formatDate(date.toString());
   };
 
-  if (userLoading) {
+  if (userLoading || !userId) {
     return (
       <div className="space-y-8">
         <Skeleton className="h-10 w-64" />
@@ -129,21 +127,12 @@ export default function GamesPage() {
     );
   }
 
-  if (!userId) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64">
-        <p className="text-lg mb-4">Please sign in to view your games</p>
-        <Button onClick={() => router.push("/sign-in")}>Sign In</Button>
-      </div>
-    );
-  }
-
   // Transform games for the list component (convert to snake_case for compatibility)
   const transformedGames = displayedGames.map((game) => ({
     id: game.id,
     name: game.name,
     concept: game.concept || "",
-    updated_at: game.updatedAt?.toISOString() || new Date().toISOString(),
+    updated_at: typeof game.updatedAt === "string" ? game.updatedAt : (game.updatedAt?.toISOString() || new Date().toISOString()),
     documents: game.documents,
   }));
 

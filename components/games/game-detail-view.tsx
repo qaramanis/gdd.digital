@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Calendar,
@@ -10,13 +10,9 @@ import {
   FileText,
   Gamepad2,
   Play,
-  Settings,
-  Users,
-  AlertTriangle,
   CheckCircle,
-  ExternalLink,
-  Download,
-  Star,
+  LayoutGrid,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,9 +23,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/progress";
-import { Separator } from "@/components/ui/separator";
 import { formatDate } from "@/lib/date-utils";
 import Image from "next/image";
 import GameScenesList from "./game-scenes-list";
@@ -51,36 +45,20 @@ export default function GameDetailView({
   document,
   sections,
 }: GameDetailViewProps) {
-  const params = useParams();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("overview");
   const { userId } = useUser();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [game, setGame] = useState(initialGame);
 
-  if (!document) {
-    console.error(
-      "Document is null - this should not happen with database triggers",
-    );
-    return (
-      <div className="game-detail-view error">
-        <div className="alert alert-error">
-          <h3>System Error</h3>
-          <p>Game document is missing</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Handle save game function
   const handleSaveGame = async (updatedGame: any) => {
     setLoading(true);
 
     try {
-      let imageData: { buffer: number[]; fileName: string; contentType: string } | undefined;
+      let imageData:
+        | { buffer: number[]; fileName: string; contentType: string }
+        | undefined;
 
-      // If there's a new image file to upload
       if (updatedGame.imageFile) {
         const file = updatedGame.imageFile;
         const arrayBuffer = await file.arrayBuffer();
@@ -99,14 +77,13 @@ export default function GameDetailView({
           concept: updatedGame.concept,
           currentImageUrl: game.image_url,
         },
-        imageData
+        imageData,
       );
 
       if (!result.success) {
         throw new Error(result.error || "Failed to update game");
       }
 
-      // Update local state with the saved game (transform to snake_case for compatibility)
       setGame({
         ...result.game,
         image_url: result.game?.imageUrl,
@@ -114,10 +91,7 @@ export default function GameDetailView({
         updated_at: result.game?.updatedAt,
       });
 
-      // Show success message
       toast.success("Game information updated successfully!");
-
-      // Close the modal
       setIsEditModalOpen(false);
     } catch (error: any) {
       console.error("Error saving game:", error);
@@ -144,89 +118,69 @@ export default function GameDetailView({
     : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push("/games")}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Games
-          </Button>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2">
-            <Star className="h-4 w-4" />
-            Star
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsEditModalOpen(true)}
-            className="gap-2"
-            disabled={loading}
-          >
-            <Edit className="h-4 w-4" />
-            Edit
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push(`/games/${game.id}/settings`)}
-            className="gap-2"
-          >
-            <Settings className="h-4 w-4" />
-            Settings
-          </Button>
-        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push("/games")}
+          className="gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Games
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsEditModalOpen(true)}
+          className="gap-2"
+          disabled={loading}
+        >
+          <Edit className="h-4 w-4" />
+          Edit
+        </Button>
       </div>
 
       {/* Game Info Header */}
-      <div className="flex flex-col md:flex-row gap-6 items-start">
-        <div className="w-32 h-32 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
-          {game.image_url && game.image_url !== "/game-placeholder.jpg" ? (
-            <Image
-              width={128}
-              height={128}
-              src={game.image_url}
-              alt={game.name}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <Gamepad2 className="h-12 w-12 text-accent" />
-          )}
-        </div>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold mb-2">{game.name}</h1>
-          <p className="text-accent mb-4">
-            {game.concept || "No concept description provided"}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {game.platforms?.map((platform: string) => (
-              <Badge key={platform} variant="secondary">
-                {platform.toUpperCase()}
-              </Badge>
-            ))}
-            {game.sections?.map((section: string) => (
-              <Badge key={section} variant="outline">
-                {section}
-              </Badge>
-            ))}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row gap-6 items-start">
+            <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center overflow-hidden shrink-0">
+              {game.image_url && game.image_url !== "/game-placeholder.jpg" ? (
+                <Image
+                  width={96}
+                  height={96}
+                  src={game.image_url}
+                  alt={game.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Gamepad2 className="h-10 w-10 text-accent" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl font-bold mb-2">{game.name}</h1>
+              <p className="text-accent mb-4 line-clamp-2">
+                {game.concept || "No concept description provided"}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {game.platforms?.map((platform: string) => (
+                  <Badge key={platform} variant="secondary">
+                    {platform.toUpperCase()}
+                  </Badge>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* Stats Cards */}
+      {/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Project Status
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Status</CardTitle>
             <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
@@ -239,18 +193,15 @@ export default function GameDetailView({
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Document Progress
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Document</CardTitle>
             <FileText className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {Math.round(documentProgress)}%
             </div>
-            <Progress value={documentProgress} className="mt-2" />
-            <p className="text-xs text-accent mt-1">
-              {completedSections}/{totalSections} sections
+            <p className="text-xs text-accent">
+              {completedSections}/{totalSections} sections complete
             </p>
           </CardContent>
         </Card>
@@ -261,7 +212,7 @@ export default function GameDetailView({
             <Calendar className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{game.timeline}</div>
+            <div className="text-2xl font-bold">{game.timeline || "N/A"}</div>
             <p className="text-xs text-accent">
               Started {game.start_date ? formatDate(game.start_date) : "N/A"}
             </p>
@@ -275,330 +226,218 @@ export default function GameDetailView({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {new Date(game.updated_at).toLocaleDateString()}
+              {formatDistanceToNow(new Date(game.updated_at), {
+                addSuffix: true,
+              })}
             </div>
-            <p className="text-xs text-accent">
-              {new Date(game.updated_at).toLocaleTimeString()}
-            </p>
+            <p className="text-xs text-accent">{formatDate(game.updated_at)}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Content Tabs */}
-      <Tabs
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="space-y-4"
-      >
-        <TabsList className="w-full flex flex-row bg-gray-100 border-black border-1 gap-1">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="document">Document</TabsTrigger>
-          <TabsTrigger value="team">Team</TabsTrigger>
-          <TabsTrigger value="scenes">Scenes</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2 space-y-6">
-              {/* Document Overview */}
-              <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-2xl">
-                        {document.title}
-                      </CardTitle>
-                      <CardDescription>
-                        Created{" "}
-                        {formatDistanceToNow(new Date(document.created_at), {
-                          addSuffix: true,
-                        })}
-                      </CardDescription>
-                    </div>
-                    <div className="flex gap-2">
-                      <ShareDocumentDialog
-                        documentId={document.id}
-                        documentTitle={document.title}
-                        userId={userId as string}
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => router.push(`/editor/${document.id}`)}
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit Document
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {document ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">
-                          Overall Progress
-                        </span>
-                        <span className="text-sm text-accent">
-                          {Math.round(documentProgress)}%
-                        </span>
-                      </div>
-                      <Progress value={documentProgress} />
-
-                      <Separator />
-
-                      <div className="space-y-2">
-                        <h4 className="text-sm font-medium">Recent Sections</h4>
-                        {sections.slice(0, 3).map((section) => (
-                          <div
-                            key={section.id}
-                            className="flex items-center justify-between p-2 rounded-md hover:bg-muted cursor-pointer"
-                            onClick={() =>
-                              router.push(
-                                `/games/${game.id}/document#${section.id}`,
-                              )
-                            }
-                          >
-                            <span className="text-sm">{section.title}</span>
-                            {section.content && section.content.length > 50 ? (
-                              <Badge variant="secondary" className="text-xs">
-                                Complete
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-xs">
-                                In Progress
-                              </Badge>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <FileText className="h-12 w-12 text-accent mx-auto mb-4" />
-                      <p className="text-accent mb-4">
-                        No document created yet
-                      </p>
-                      <Button
-                        onClick={() =>
-                          router.push(`/games/${game.id}/document/new`)
-                        }
-                      >
-                        Create Document
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Unity Scene Preview */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>Unity Scene Preview</span>
-                    <Button
-                      size="sm"
-                      onClick={() => router.push(`/playground?game=${game.id}`)}
-                    >
-                      <Play className="h-4 w-4 mr-2" />
-                      Open in Playground
-                    </Button>
+      {/* Main Content Grid */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Document Summary */}
+        <div className="lg:col-span-2">
+          <Card className="h-full">
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Game Design Document
                   </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="relative h-64 bg-black rounded-lg overflow-hidden">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <Play className="h-12 w-12 text-white mb-4 mx-auto" />
-                        <p className="text-white mb-2">Main Game Scene</p>
-                        <p className="text-white/60 text-sm">
-                          Click to view in playground
-                        </p>
-                      </div>
-                    </div>
-                    {/* Placeholder for actual Unity WebGL content */}
-                    <div className="absolute top-2 right-2 flex gap-2">
-                      <Badge className="bg-blue-500">Unity</Badge>
-                      <Badge className="bg-green-500">Active</Badge>
-                    </div>
-                  </div>
-                  <div className="mt-4 grid grid-cols-3 gap-2">
+                  <CardDescription>
+                    {document
+                      ? `Created ${formatDistanceToNow(new Date(document.created_at), { addSuffix: true })}`
+                      : "No document created yet"}
+                  </CardDescription>
+                </div>
+                {document && (
+                  <div className="flex gap-2">
+                    <ShareDocumentDialog
+                      documentId={document.id}
+                      documentTitle={document.title}
+                      userId={userId as string}
+                    />
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full"
-                      onClick={() => router.push(`/playground?game=${game.id}`)}
+                      onClick={() => router.push(`/editor/${document.id}`)}
                     >
-                      <Play className="h-4 w-4 mr-1" />
-                      Play
-                    </Button>
-                    <Button variant="outline" size="sm" className="w-full">
-                      <ExternalLink className="h-4 w-4 mr-1" />
-                      Fullscreen
-                    </Button>
-                    <Button variant="outline" size="sm" className="w-full">
-                      <Download className="h-4 w-4 mr-1" />
-                      Download
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Right Sidebar */}
-            <div className="space-y-6">
-              {/* Notes & Alerts */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Notes & Alerts</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">
-                        Document Update Needed
-                      </p>
-                      <p className="text-xs text-accent">
-                        Gameplay mechanics section needs review
-                      </p>
-                    </div>
-                  </div>
-                  <Separator />
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Milestone Complete</p>
-                      <p className="text-xs text-accent">
-                        Core mechanics implemented
-                      </p>
-                    </div>
-                  </div>
-                  <Separator />
-                  <Button variant="outline" size="sm" className="w-full">
-                    View All Notes
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Quick Actions */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full justify-start"
-                    onClick={() => router.push(`/games/${game.id}/document`)}
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Edit Document
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full justify-start"
-                    onClick={() => router.push(`/playground?game=${game.id}`)}
-                  >
-                    <Play className="h-4 w-4 mr-2" />
-                    Open Playground
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full justify-start"
-                    onClick={() => router.push(`/games/${game.id}/team`)}
-                  >
-                    <Users className="h-4 w-4 mr-2" />
-                    Manage Team
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full justify-start"
-                    onClick={() => router.push(`/games/${game.id}/export`)}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Export Game
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Development Info */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Development Info</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-accent">Created</span>
-                    <span>{formatDate(game.created_at)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-accent">Last Modified</span>
-                    <span>{formatDate(game.updated_at)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-accent">Project ID</span>
-                    <span className="font-mono text-xs">{game.id}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-accent">Status</span>
-                    <Badge variant="secondary">Active</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="document" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Document Management</CardTitle>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
-              <p className="text-accent">
-                Document editing interface will be displayed here.
-              </p>
+              {document ? (
+                <div className="space-y-6">
+                  {/* Progress Summary */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span className="text-sm font-medium">Completion</span>
+                      </div>
+                      <div className="text-3xl font-bold mb-2">
+                        {Math.round(documentProgress)}%
+                      </div>
+                      <Progress value={documentProgress} className="h-2" />
+                      <p className="text-xs text-accent mt-2">
+                        {completedSections} of {totalSections} sections
+                        completed
+                      </p>
+                    </div>
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <LayoutGrid className="h-4 w-4 text-blue-500" />
+                        <span className="text-sm font-medium">Sections</span>
+                      </div>
+                      <div className="text-3xl font-bold mb-2">
+                        {totalSections}
+                      </div>
+                      <div className="flex gap-2 text-xs">
+                        <Badge variant="secondary" className="text-xs">
+                          {completedSections} complete
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {totalSections - completedSections} in progress
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Recent Sections */}
+                  <div>
+                    <h4 className="text-sm font-medium mb-3">
+                      Document Sections
+                    </h4>
+                    <div className="space-y-2">
+                      {sections.slice(0, 5).map((section) => (
+                        <div
+                          key={section.id}
+                          className="flex items-center justify-between p-3 rounded-md hover:bg-muted cursor-pointer transition-colors"
+                          onClick={() => router.push(`/editor/${document.id}`)}
+                        >
+                          <span className="text-sm truncate flex-1">
+                            {section.title}
+                          </span>
+                          {section.content && section.content.length > 50 ? (
+                            <Badge variant="secondary" className="text-xs ml-2">
+                              Complete
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs ml-2">
+                              In Progress
+                            </Badge>
+                          )}
+                        </div>
+                      ))}
+                      {sections.length > 5 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full mt-2"
+                          onClick={() => router.push(`/editor/${document.id}`)}
+                        >
+                          View all {sections.length} sections
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <DocumentEmptyState />
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
               <Button
-                className="mt-4"
-                onClick={() => router.push(`/games/${game.id}/document`)}
+                variant="default"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => router.push(`/games/${game.id}/gdd`)}
               >
-                Open Document Editor
+                <BookOpen className="h-4 w-4 mr-2" />
+                Edit GDD
+              </Button>
+              {document && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start"
+                  onClick={() => router.push(`/editor/${document.id}`)}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Edit Document
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => router.push(`/playground?game=${game.id}`)}
+              >
+                <Play className="h-4 w-4 mr-2" />
+                Open Playground
               </Button>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        <TabsContent value="team" className="space-y-4">
+          {/* Project Info */}
           <Card>
             <CardHeader>
-              <CardTitle>Team Members</CardTitle>
+              <CardTitle className="text-base">Project Info</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-accent">
-                Team management interface will be displayed here.
-              </p>
-              <Button
-                className="mt-4"
-                onClick={() => router.push(`/games/${game.id}/team`)}
-              >
-                Manage Team
-              </Button>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-accent">Created</span>
+                <span>{formatDate(game.created_at)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-accent">Last Modified</span>
+                <span>{formatDate(game.updated_at)}</span>
+              </div>
+              {game.timeline && (
+                <div className="flex justify-between">
+                  <span className="text-accent">Timeline</span>
+                  <span>{game.timeline}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-accent">Status</span>
+                <Badge variant="secondary">Active</Badge>
+              </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+      </div>
 
-        <TabsContent value="scenes" className="space-y-4">
-          <GameScenesList
-            gameId={params.id as string}
-            userId={userId as string}
-          />
-        </TabsContent>
-      </Tabs>
+      {/* Scenes Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Gamepad2 className="h-5 w-5" />
+            Game Scenes
+          </CardTitle>
+          <CardDescription>Upload and manage your game scenes</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <GameScenesList gameId={game.id} userId={userId as string} />
+        </CardContent>
+      </Card>
 
       {/* Edit Game Modal */}
       <EditGameModal
@@ -608,6 +447,21 @@ export default function GameDetailView({
         onSave={handleSaveGame}
         userId={userId as string}
       />
+    </div>
+  );
+}
+
+function DocumentEmptyState() {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 px-4 bg-muted/30 rounded-lg">
+      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+        <FileText className="h-8 w-8 text-accent" />
+      </div>
+      <p className="text-lg font-medium mb-2">No Document Found</p>
+      <p className="text-sm text-accent text-center max-w-sm">
+        The game design document is missing. This may indicate an issue with the
+        game setup. Please try refreshing the page.
+      </p>
     </div>
   );
 }
