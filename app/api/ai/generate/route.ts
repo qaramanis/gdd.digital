@@ -1,10 +1,11 @@
 import { streamText } from "ai";
-import { anthropic, DEFAULT_MODEL } from "@/lib/ai/client";
+import { getModel, DEFAULT_MODEL_ID } from "@/lib/ai/client";
 import {
   SECTION_SYSTEM_PROMPTS,
   SUBSECTION_COMPLETION_PROMPTS,
   type GameContext,
 } from "@/lib/ai/prompts";
+import type { AIModelId } from "@/database/drizzle/schema/preferences";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -16,10 +17,12 @@ export async function POST(request: Request) {
       sectionType,
       subSectionType,
       gameContext,
+      modelId,
     }: {
       sectionType: string;
       subSectionType: string;
       gameContext: GameContext;
+      modelId?: AIModelId;
     } = body;
 
     const systemPrompt = SECTION_SYSTEM_PROMPTS[sectionType] ||
@@ -43,7 +46,7 @@ ${gameInfo}
 Generate professional, engaging content for this section. Write 2-4 paragraphs that are specific to this game and would fit in a professional game design document.`;
 
     const result = streamText({
-      model: anthropic(DEFAULT_MODEL),
+      model: getModel(modelId || DEFAULT_MODEL_ID),
       system: systemPrompt,
       prompt: userPrompt,
       maxOutputTokens: 800,

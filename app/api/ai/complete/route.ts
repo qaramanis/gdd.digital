@@ -1,10 +1,11 @@
 import { streamText } from "ai";
-import { anthropic, FAST_MODEL } from "@/lib/ai/client";
+import { getModel, DEFAULT_MODEL_ID } from "@/lib/ai/client";
 import {
   buildCompletionPrompt,
   SECTION_SYSTEM_PROMPTS,
   type GameContext,
 } from "@/lib/ai/prompts";
+import type { AIModelId } from "@/database/drizzle/schema/preferences";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -17,11 +18,13 @@ export async function POST(request: Request) {
       subSectionType,
       currentText,
       gameContext,
+      modelId,
     }: {
       sectionType: string;
       subSectionType: string;
       currentText: string;
       gameContext: GameContext;
+      modelId?: AIModelId;
     } = body;
 
     // Validate inputs
@@ -43,10 +46,10 @@ export async function POST(request: Request) {
     });
 
     const result = streamText({
-      model: anthropic(FAST_MODEL),
+      model: getModel(modelId || DEFAULT_MODEL_ID),
       system: systemPrompt,
       prompt: userPrompt,
-      maxOutputTokens: 100, // Keep completions short for ghost text
+      maxOutputTokens: 100,
       temperature: 0.7,
     });
 

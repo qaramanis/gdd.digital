@@ -5,3 +5,4 @@ export * from "./teams";
 export * from "./collaboration";
 export * from "./notifications";
 export * from "./gdd";
+export * from "./preferences";

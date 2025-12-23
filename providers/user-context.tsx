@@ -1,79 +1,50 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useMemo } from "react";
 import { useSession } from "@/lib/auth/auth-client";
 
+interface User {
+  id: string;
+  email: string;
+  name?: string;
+  image?: string;
+}
+
 interface UserContextType {
-  user: any | null;
+  user: User | null;
   userId: string | null;
   loading: boolean;
+  isAuthenticated: boolean;
   error: string | null;
-  refreshUser: () => Promise<void>;
+  refreshUser: () => void;
 }
 
 const UserContext = createContext<UserContextType>({
   user: null,
   userId: null,
   loading: true,
+  isAuthenticated: false,
   error: null,
-  refreshUser: async () => {},
+  refreshUser: () => {},
 });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const { data: session, isPending } = useSession();
-  const [user, setUser] = useState<any | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: session, isPending, error, refetch } = useSession();
 
-  useEffect(() => {
-    async function loadUser() {
-      try {
-        setLoading(true);
-        setError(null);
-
-        if (session?.user) {
-          setUser(session.user);
-          setUserId(session.user.id);
-
-          // TODO Note: For RLS to work properly, you'll need to configure
-          // Supabase to accept Better Auth JWTs or implement a
-          // server-side proxy that adds proper auth headers
-        } else {
-          setUser(null);
-          setUserId(null);
-        }
-      } catch (err) {
-        console.error("Error loading user:", err);
-        setError("Failed to load user data");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    if (!isPending) {
-      loadUser();
-    }
-  }, [session, isPending]);
-
-  const refreshUser = async () => {
-    // Refresh user data if needed
-    if (session?.user) {
-      setUser(session.user);
-      setUserId(session.user.id);
-    }
-  };
+  const value = useMemo(() => {
+    const user = session?.user as User | null;
+    return {
+      user,
+      userId: user?.id ?? null,
+      loading: isPending,
+      isAuthenticated: !!user,
+      error: error ? "Failed to load session" : null,
+      refreshUser: refetch,
+    };
+  }, [session, isPending, error, refetch]);
 
   return (
-    <UserContext.Provider
-      value={{
-        user,
-        userId,
-        loading: loading || isPending,
-        error,
-        refreshUser,
-      }}
-    >
+    <UserContext.Provider value={value}>
       {children}
     </UserContext.Provider>
   );

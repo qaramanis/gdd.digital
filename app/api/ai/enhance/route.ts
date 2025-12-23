@@ -1,10 +1,11 @@
 import { streamText } from "ai";
-import { anthropic, DEFAULT_MODEL } from "@/lib/ai/client";
+import { getModel, DEFAULT_MODEL_ID } from "@/lib/ai/client";
 import {
   buildEnhancementPrompt,
   SECTION_SYSTEM_PROMPTS,
   type GameContext,
 } from "@/lib/ai/prompts";
+import type { AIModelId } from "@/database/drizzle/schema/preferences";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -17,11 +18,13 @@ export async function POST(request: Request) {
       text,
       sectionType,
       gameContext,
+      modelId,
     }: {
       action: "enhance" | "improve" | "expand" | "concise";
       text: string;
       sectionType: string;
       gameContext: GameContext;
+      modelId?: AIModelId;
     } = body;
 
     // Validate inputs
@@ -38,7 +41,7 @@ export async function POST(request: Request) {
     const userPrompt = buildEnhancementPrompt(action, text, gameContext);
 
     const result = streamText({
-      model: anthropic(DEFAULT_MODEL),
+      model: getModel(modelId || DEFAULT_MODEL_ID),
       system: systemPrompt,
       prompt: userPrompt,
       maxOutputTokens: 1000,

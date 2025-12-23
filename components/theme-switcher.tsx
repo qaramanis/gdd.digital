@@ -25,8 +25,8 @@ export function ThemeToggle({ className }: { className?: string }) {
         className
       )}
     >
-      <Sun className="h-5 w-5 text-gray-600 dark:text-gray-300 transition-all dark:hidden" />
-      <Moon className="h-5 w-5 text-gray-600 dark:text-gray-300 transition-all hidden dark:block" />
+      <Sun className="h-5 w-5 text-gray-600 transition-all dark:hidden" />
+      <Moon className="h-5 w-5 text-gray-600 transition-all hidden dark:block" />
       <span className="sr-only">Toggle theme</span>
     </button>
   );

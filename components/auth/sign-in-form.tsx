@@ -1,10 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "@/lib/auth/auth-client";
 import Link from "next/link";
 
 export default function SignInForm() {
+  const searchParams = useSearchParams();
+  const isExpired = searchParams.get("expired") === "true";
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -15,7 +20,7 @@ export default function SignInForm() {
     try {
       await signIn.social({
         provider,
-        callbackURL: "/dashboard",
+        callbackURL: callbackUrl,
       });
     } catch (error) {
       console.error(`${provider} sign in error:`, error);
@@ -31,9 +36,14 @@ export default function SignInForm() {
           <Link href="/">Logo</Link>
           <div>
             <div className="text-2xl font-bold">Log In</div>
-            <div className="mb-8 text-accent">
+            <div className="mb-2 text-accent">
               Sign in to your gdd.now account
             </div>
+            {isExpired && (
+              <div className="mb-4 text-red-400 text-sm">
+                Session expired. Please sign in again.
+              </div>
+            )}
             <div className="flex flex-col gap-4">
               <input
                 type="email"
@@ -62,7 +72,7 @@ export default function SignInForm() {
                     {
                       email,
                       password,
-                      callbackURL: "/dashboard",
+                      callbackURL: callbackUrl,
                     },
                     {
                       onRequest: () => {

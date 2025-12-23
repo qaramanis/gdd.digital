@@ -178,7 +178,7 @@ export default function DashboardLayout({
               </Button>
             </div>
           </header>
-          <main className="flex-1 overflow-y-auto bg-muted/10">
+          <main className="flex-1 overflow-y-auto bg-background">
             <div className="container mx-auto p-6">{children}</div>
           </main>
         </SidebarInset>

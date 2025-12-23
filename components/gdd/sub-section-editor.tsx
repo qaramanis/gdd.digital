@@ -5,8 +5,9 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Loader2, Check, X } from "lucide-react";
+import { Loader2, Check, X, Sparkles, ListPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { AIModelId } from "@/database/drizzle/schema/preferences";
 
 interface GameContext {
   name: string;
@@ -23,6 +24,7 @@ interface SubSectionEditorProps {
   gameContext: GameContext;
   initialContent?: string;
   onChange?: (content: string) => void;
+  modelId?: AIModelId;
 }
 
 export function SubSectionEditor({
@@ -33,6 +35,7 @@ export function SubSectionEditor({
   gameContext,
   initialContent = "",
   onChange,
+  modelId,
 }: SubSectionEditorProps) {
   const [suggestion, setSuggestion] = useState<string>("");
   const [isLoadingSuggestion, setIsLoadingSuggestion] = useState(false);
@@ -51,6 +54,7 @@ export function SubSectionEditor({
       }),
     ],
     content: initialContent,
+    immediatelyRender: false, // Prevent SSR hydration mismatch
     editorProps: {
       attributes: {
         class:
@@ -97,6 +101,7 @@ export function SubSectionEditor({
             subSectionType,
             currentText: text,
             gameContext,
+            modelId,
           }),
           signal: abortControllerRef.current.signal,
         });
@@ -123,7 +128,7 @@ export function SubSectionEditor({
         setIsLoadingSuggestion(false);
       }
     },
-    [sectionType, subSectionType, gameContext]
+    [sectionType, subSectionType, gameContext, modelId],
   );
 
   const acceptSuggestion = useCallback(() => {
@@ -151,6 +156,7 @@ export function SubSectionEditor({
           sectionType,
           subSectionType,
           gameContext,
+          modelId,
         }),
         signal: abortControllerRef.current.signal,
       });
@@ -176,7 +182,7 @@ export function SubSectionEditor({
     } finally {
       setIsGenerating(false);
     }
-  }, [editor, sectionType, subSectionType, gameContext]);
+  }, [editor, sectionType, subSectionType, gameContext, modelId]);
 
   // Handle Tab key to accept suggestion
   useEffect(() => {
@@ -220,7 +226,7 @@ export function SubSectionEditor({
             </>
           ) : (
             <>
-              <Sparkles className="h-3 w-3" />
+              <ListPlus className="h-3 w-3" />
               AI Generate
             </>
           )}
@@ -231,7 +237,7 @@ export function SubSectionEditor({
         <div
           className={cn(
             "border rounded-lg bg-background transition-colors",
-            editor?.isFocused && "ring-2 ring-ring ring-offset-2"
+            editor?.isFocused && "ring-2 ring-ring ring-offset-2",
           )}
         >
           <EditorContent editor={editor} />
@@ -276,7 +282,11 @@ export function SubSectionEditor({
             </div>
             {suggestion && (
               <p className="text-xs text-accent mt-1">
-                Press <kbd className="px-1 py-0.5 bg-background rounded text-xs">Tab</kbd> to accept
+                Press{" "}
+                <kbd className="px-1 py-0.5 bg-background rounded text-xs">
+                  Tab
+                </kbd>{" "}
+                to accept
               </p>
             )}
           </div>

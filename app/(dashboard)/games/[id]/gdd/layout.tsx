@@ -37,13 +37,13 @@ export default function GDDLayout({ children }: GDDLayoutProps) {
                   key={section.slug}
                   href={`/games/${gameId}/gdd/${section.slug}`}
                   className={cn(
-                    "flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors",
+                    "flex items-center gap-4 px-2 py-2 text-sm rounded-lg transition-all duration-300",
                     isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-muted",
+                      ? "bg-foreground text-primary-foreground"
+                      : "hover:bg-gray-200",
                   )}
                 >
-                  <span className="w-6 text-xs opacity-60">
+                  <span className="w-6 text-xs">
                     {String(section.number).padStart(2, "0")}
                   </span>
                   <span className="truncate">{section.title}</span>

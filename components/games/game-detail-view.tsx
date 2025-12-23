@@ -418,7 +418,9 @@ export default function GameDetailView({
               )}
               <div className="flex justify-between">
                 <span className="text-accent">Status</span>
-                <Badge variant="secondary">Active</Badge>
+                <Badge variant="secondary" className="text-background">
+                  Active
+                </Badge>
               </div>
             </CardContent>
           </Card>
@@ -453,14 +455,14 @@ export default function GameDetailView({
 
 function DocumentEmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-4 bg-muted/30 rounded-lg">
-      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+    <div className="flex flex-col items-center justify-center py-12 px-4 bg-transparent rounded-lg">
+      <div className="w-16 h-16 bg-transparent rounded-full flex items-center justify-center mb-4">
         <FileText className="h-8 w-8 text-accent" />
       </div>
       <p className="text-lg font-medium mb-2">No Document Found</p>
       <p className="text-sm text-accent text-center max-w-sm">
-        The game design document is missing. This may indicate an issue with the
-        game setup. Please try refreshing the page.
+        There is no document available for this game.
+        <br /> If you think this is a mistake, try refreshing the page.
       </p>
     </div>
   );

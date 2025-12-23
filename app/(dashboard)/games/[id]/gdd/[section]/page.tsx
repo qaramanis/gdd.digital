@@ -11,11 +11,14 @@ import {
   getGDDSection,
   GDDSectionContent,
 } from "@/lib/actions/gdd-actions";
+import { getUserPreferences } from "@/lib/actions/preferences-actions";
 import { fetchGamePageData } from "@/lib/actions/game-actions";
 import { useUser } from "@/providers/user-context";
 import { SubSectionEditor } from "@/components/gdd/sub-section-editor";
 import { EnhanceButtons } from "@/components/gdd/enhance-buttons";
+import { ModelSelector } from "@/components/gdd/model-selector";
 import { ArrowLeft, ArrowRight, Save, Loader2, Check } from "lucide-react";
+import type { AIModelId } from "@/database/drizzle/schema/preferences";
 
 interface GameContext {
   name: string;
@@ -40,6 +43,7 @@ export default function GDDSectionPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<AIModelId>("claude-sonnet");
 
   const contentRef = useRef<GDDSectionContent>({});
 
@@ -52,9 +56,10 @@ export default function GDDSectionPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [gameResult, sectionResult] = await Promise.all([
+      const [gameResult, sectionResult, prefsResult] = await Promise.all([
         fetchGamePageData(gameId, userId!),
         getGDDSection(gameId, sectionSlug),
+        getUserPreferences(userId!),
       ]);
 
       if (gameResult.game) {
@@ -69,6 +74,10 @@ export default function GDDSectionPage() {
       if (sectionResult.success && sectionResult.content) {
         setContent(sectionResult.content);
         contentRef.current = sectionResult.content;
+      }
+
+      if (prefsResult.success && prefsResult.preferences) {
+        setSelectedModel(prefsResult.preferences.preferredAiModel);
       }
     } catch (error) {
       console.error("Error loading section data:", error);
@@ -184,11 +193,16 @@ export default function GDDSectionPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <ModelSelector
+            userId={userId!}
+            onModelChange={setSelectedModel}
+          />
           <EnhanceButtons
             sectionType={sectionSlug}
             gameContext={gameContext}
             getAllContent={getAllContent}
             setAllContent={setAllContent}
+            modelId={selectedModel}
           />
           <Button
             variant="default"
@@ -247,6 +261,7 @@ export default function GDDSectionPage() {
               gameContext={gameContext}
               initialContent={content[subSection.id] || ""}
               onChange={(value) => handleSubSectionChange(subSection.id, value)}
+              modelId={selectedModel}
             />
           ))}
         </CardContent>

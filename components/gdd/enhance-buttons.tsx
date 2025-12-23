@@ -8,7 +8,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sparkles, Wand2, Expand, Minimize2, Loader2, ChevronDown } from "lucide-react";
+import { Sparkles, Wand2, Expand, Minimize2, Loader2, ChevronDown, Workflow } from "lucide-react";
+import type { AIModelId } from "@/database/drizzle/schema/preferences";
 
 interface GameContext {
   name: string;
@@ -22,6 +23,7 @@ interface EnhanceButtonsProps {
   gameContext: GameContext;
   getAllContent: () => string;
   setAllContent: (content: string) => void;
+  modelId?: AIModelId;
 }
 
 type EnhanceAction = "enhance" | "improve" | "expand" | "concise";
@@ -58,6 +60,7 @@ export function EnhanceButtons({
   gameContext,
   getAllContent,
   setAllContent,
+  modelId,
 }: EnhanceButtonsProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [activeAction, setActiveAction] = useState<EnhanceAction | null>(null);
@@ -80,6 +83,7 @@ export function EnhanceButtons({
           text: content,
           sectionType,
           gameContext,
+          modelId,
         }),
       });
 
@@ -118,8 +122,8 @@ export function EnhanceButtons({
               </>
             ) : (
               <>
-                <Sparkles className="h-4 w-4" />
-                AI Actions
+                <Workflow className="h-4 w-4" />
+                Actions
                 <ChevronDown className="h-3 w-3" />
               </>
             )}

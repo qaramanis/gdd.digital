@@ -16,7 +16,7 @@ export default function ProjectListItem({
 }) {
   return (
     <div
-      className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent cursor-pointer transition-colors"
+      className="flex items-center justify-between p-3 rounded-lg border hover:bg-gray-200 cursor-pointer transition-colors"
       onClick={onClick}
     >
       <div className="flex items-center space-x-4">
