@@ -24,6 +24,7 @@ export default function GamesTabContent({ games }: { games: Game[] }) {
               : ""
           }
           badge={game.platforms?.[0]}
+          imageUrl={game.image_url}
           onClick={() => router.push(`/games/${game.id}`)}
         />
       ))}

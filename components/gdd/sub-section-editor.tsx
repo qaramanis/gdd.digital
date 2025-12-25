@@ -5,9 +5,17 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Button } from "@/components/ui/button";
-import { Loader2, Check, X, Sparkles, ListPlus } from "lucide-react";
+import {
+  Loader2,
+  Check,
+  X,
+  Sparkles,
+  AlertCircle,
+  RotateCcw,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AIModelId } from "@/database/drizzle/schema/preferences";
+import type { AllSectionsContent } from "@/lib/ai/prompts";
 
 interface GameContext {
   name: string;
@@ -22,6 +30,7 @@ interface SubSectionEditorProps {
   subSectionType: string;
   sectionType: string;
   gameContext: GameContext;
+  allContent: AllSectionsContent;
   initialContent?: string;
   onChange?: (content: string) => void;
   modelId?: AIModelId;
@@ -33,14 +42,14 @@ export function SubSectionEditor({
   subSectionType,
   sectionType,
   gameContext,
+  allContent,
   initialContent = "",
   onChange,
   modelId,
 }: SubSectionEditorProps) {
-  const [suggestion, setSuggestion] = useState<string>("");
-  const [isLoadingSuggestion, setIsLoadingSuggestion] = useState(false);
+  const [generatedContent, setGeneratedContent] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const [generationError, setGenerationError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const editor = useEditor({
@@ -62,90 +71,16 @@ export function SubSectionEditor({
       },
     },
     onUpdate: ({ editor }) => {
-      const text = editor.getText();
       onChange?.(editor.getHTML());
-
-      // Clear previous debounce
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-
-      // Cancel previous request
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-
-      // Clear suggestion when text changes
-      setSuggestion("");
-
-      // Only suggest if there's meaningful text
-      if (text.length > 10 && !text.endsWith(" ")) {
-        debounceRef.current = setTimeout(() => {
-          fetchSuggestion(text);
-        }, 800);
-      }
     },
   });
-
-  const fetchSuggestion = useCallback(
-    async (text: string) => {
-      setIsLoadingSuggestion(true);
-      abortControllerRef.current = new AbortController();
-
-      try {
-        const response = await fetch("/api/ai/complete", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sectionType,
-            subSectionType,
-            currentText: text,
-            gameContext,
-            modelId,
-          }),
-          signal: abortControllerRef.current.signal,
-        });
-
-        if (!response.ok) throw new Error("Failed to get suggestion");
-
-        const reader = response.body?.getReader();
-        if (!reader) return;
-
-        let fullSuggestion = "";
-        const decoder = new TextDecoder();
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          fullSuggestion += decoder.decode(value, { stream: true });
-          setSuggestion(fullSuggestion.trim());
-        }
-      } catch (error: any) {
-        if (error.name !== "AbortError") {
-          console.error("Suggestion error:", error);
-        }
-      } finally {
-        setIsLoadingSuggestion(false);
-      }
-    },
-    [sectionType, subSectionType, gameContext, modelId],
-  );
-
-  const acceptSuggestion = useCallback(() => {
-    if (!editor || !suggestion) return;
-
-    editor.commands.insertContent(" " + suggestion);
-    setSuggestion("");
-  }, [editor, suggestion]);
-
-  const dismissSuggestion = useCallback(() => {
-    setSuggestion("");
-  }, []);
 
   const generateContent = useCallback(async () => {
     if (!editor) return;
 
+    setGeneratedContent("");
     setIsGenerating(true);
+    setGenerationError(null);
     abortControllerRef.current = new AbortController();
 
     try {
@@ -156,54 +91,88 @@ export function SubSectionEditor({
           sectionType,
           subSectionType,
           gameContext,
+          allContent,
           modelId,
         }),
         signal: abortControllerRef.current.signal,
       });
 
-      if (!response.ok) throw new Error("Failed to generate content");
+      // Check for validation errors
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (errorData.code === "INSUFFICIENT_CONTEXT") {
+          setGenerationError(errorData.error);
+          return;
+        }
+        throw new Error(errorData.error || "Failed to generate content");
+      }
 
       const reader = response.body?.getReader();
       if (!reader) return;
 
-      editor.commands.clearContent();
+      let fullContent = "";
       const decoder = new TextDecoder();
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
-        editor.commands.insertContent(chunk);
+        fullContent += chunk;
+        setGeneratedContent(fullContent.trim());
       }
-    } catch (error: any) {
-      if (error.name !== "AbortError") {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name !== "AbortError") {
         console.error("Generation error:", error);
+        setGenerationError("Failed to generate content. Please try again.");
       }
     } finally {
       setIsGenerating(false);
     }
-  }, [editor, sectionType, subSectionType, gameContext, modelId]);
+  }, [editor, sectionType, subSectionType, gameContext, allContent, modelId]);
 
-  // Handle Tab key to accept suggestion
+  const acceptGenerated = useCallback(() => {
+    if (!editor || !generatedContent) return;
+
+    // Convert plain text paragraphs to HTML paragraphs
+    const paragraphs = generatedContent
+      .split(/\n\n+/) // Split by double newlines (paragraph breaks)
+      .map((p) => p.trim())
+      .filter((p) => p.length > 0);
+
+    const htmlContent = paragraphs
+      .map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`) // Wrap in <p> tags, convert single newlines to <br>
+      .join("");
+
+    editor.commands.setContent(htmlContent);
+    onChange?.(htmlContent);
+    setGeneratedContent("");
+  }, [editor, generatedContent, onChange]);
+
+  const dismissGenerated = useCallback(() => {
+    setGeneratedContent("");
+  }, []);
+
+  // Handle Tab/Esc keys for generated content
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Tab" && suggestion && !e.shiftKey) {
-        e.preventDefault();
-        acceptSuggestion();
-      } else if (e.key === "Escape" && suggestion) {
-        e.preventDefault();
-        dismissSuggestion();
+      if (generatedContent) {
+        if (e.key === "Tab" && !e.shiftKey) {
+          e.preventDefault();
+          acceptGenerated();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          dismissGenerated();
+        }
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [suggestion, acceptSuggestion, dismissSuggestion]);
+  }, [generatedContent, acceptGenerated, dismissGenerated]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
       if (abortControllerRef.current) abortControllerRef.current.abort();
     };
   }, []);
@@ -226,12 +195,31 @@ export function SubSectionEditor({
             </>
           ) : (
             <>
-              <ListPlus className="h-3 w-3" />
+              <Sparkles className="h-3 w-3" />
               AI Generate
             </>
           )}
         </Button>
       </div>
+
+      {/* Generation error message */}
+      {generationError && (
+        <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
+          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+          <div className="flex-1">
+            <p className="font-medium">Cannot generate content</p>
+            <p className="text-destructive/80">{generationError}</p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setGenerationError(null)}
+            className="h-6 w-6 p-0 shrink-0 hover:bg-destructive/20"
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
 
       <div className="relative">
         <div
@@ -243,26 +231,43 @@ export function SubSectionEditor({
           <EditorContent editor={editor} />
         </div>
 
-        {/* Ghost text suggestion */}
-        {(suggestion || isLoadingSuggestion) && (
+        {/* AI Generated content preview */}
+        {(generatedContent || isGenerating) && (
           <div className="mt-2 p-3 bg-muted/50 rounded-lg border border-dashed">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1">
-                {isLoadingSuggestion && !suggestion ? (
+                {isGenerating && !generatedContent ? (
                   <div className="flex items-center gap-2 text-sm text-accent">
                     <Loader2 className="h-3 w-3 animate-spin" />
                     Thinking...
                   </div>
                 ) : (
-                  <p className="text-sm text-accent italic">{suggestion}</p>
+                  <div className="text-sm text-accent whitespace-pre-wrap">
+                    {generatedContent}
+                  </div>
                 )}
               </div>
-              {suggestion && (
-                <div className="flex items-center gap-1">
+            </div>
+            <div className="flex flex-row items-end justify-between">
+              {generatedContent && !isGenerating && (
+                <p className="text-xs text-accent mt-8">
+                  Press{" "}
+                  <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs">
+                    Tab
+                  </kbd>{" "}
+                  to accept or{" "}
+                  <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs">
+                    Esc
+                  </kbd>{" "}
+                  to dismiss
+                </p>
+              )}
+              {generatedContent && !isGenerating && (
+                <div className="flex items-center gap-1 shrink-0">
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={acceptSuggestion}
+                    onClick={acceptGenerated}
                     className="h-6 w-6 p-0"
                     title="Accept (Tab)"
                   >
@@ -271,7 +276,16 @@ export function SubSectionEditor({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={dismissSuggestion}
+                    onClick={generateContent}
+                    className="h-6 w-6 p-0"
+                    title="Regenerate"
+                  >
+                    <RotateCcw className="h-3 w-3 text-orange-400" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={dismissGenerated}
                     className="h-6 w-6 p-0"
                     title="Dismiss (Esc)"
                   >
@@ -280,15 +294,6 @@ export function SubSectionEditor({
                 </div>
               )}
             </div>
-            {suggestion && (
-              <p className="text-xs text-accent mt-1">
-                Press{" "}
-                <kbd className="px-1 py-0.5 bg-background rounded text-xs">
-                  Tab
-                </kbd>{" "}
-                to accept
-              </p>
-            )}
           </div>
         )}
       </div>

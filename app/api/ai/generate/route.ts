@@ -1,55 +1,75 @@
 import { streamText } from "ai";
 import { getModel, DEFAULT_MODEL_ID } from "@/lib/ai/client";
 import {
-  SECTION_SYSTEM_PROMPTS,
-  SUBSECTION_COMPLETION_PROMPTS,
+  buildGenerationPrompt,
+  validateGenerationContext,
+  GENERATION_SYSTEM_PROMPT,
   type GameContext,
+  type AllSectionsContent,
 } from "@/lib/ai/prompts";
+import { getSubSection } from "@/lib/gdd/sections";
 import type { AIModelId } from "@/database/drizzle/schema/preferences";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+interface GenerateRequest {
+  sectionType: string;
+  subSectionType: string;
+  gameContext: GameContext;
+  allContent: AllSectionsContent;
+  modelId?: AIModelId;
+}
+
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body: GenerateRequest = await request.json();
     const {
       sectionType,
       subSectionType,
       gameContext,
+      allContent = {},
       modelId,
-    }: {
-      sectionType: string;
-      subSectionType: string;
-      gameContext: GameContext;
-      modelId?: AIModelId;
     } = body;
 
-    const systemPrompt = SECTION_SYSTEM_PROMPTS[sectionType] ||
-      SECTION_SYSTEM_PROMPTS.overview;
+    // Get subsection info including instructions
+    const subSection = getSubSection(sectionType, subSectionType);
+    if (!subSection) {
+      return new Response(
+        JSON.stringify({ error: `Unknown subsection: ${sectionType}/${subSectionType}` }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
-    const subSectionPrompt = SUBSECTION_COMPLETION_PROMPTS[subSectionType] ||
-      "Write professional content for this game design document section.";
+    // Validate that we have enough context
+    const validation = validateGenerationContext(gameContext, allContent);
+    if (!validation.isValid) {
+      return new Response(
+        JSON.stringify({
+          error: validation.error,
+          code: "INSUFFICIENT_CONTEXT",
+          filledCount: validation.filledCount,
+          hasGameInfo: validation.hasGameInfo,
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
-    const gameInfo = `
-Game Name: ${gameContext.name}
-Game Concept: ${gameContext.concept}
-Platforms: ${gameContext.platforms.join(", ")}
-${gameContext.timeline ? `Timeline: ${gameContext.timeline}` : ""}
-`.trim();
-
-    const userPrompt = `${subSectionPrompt}
-
-Game Information:
-${gameInfo}
-
-Generate professional, engaging content for this section. Write 2-4 paragraphs that are specific to this game and would fit in a professional game design document.`;
+    // Build the context-aware prompt
+    const userPrompt = buildGenerationPrompt({
+      sectionType,
+      subSectionType,
+      subSectionTitle: subSection.title,
+      instructions: subSection.instructions,
+      gameContext,
+      allContent,
+    });
 
     const result = streamText({
       model: getModel(modelId || DEFAULT_MODEL_ID),
-      system: systemPrompt,
+      system: GENERATION_SYSTEM_PROMPT,
       prompt: userPrompt,
-      maxOutputTokens: 800,
+      maxOutputTokens: 1000,
       temperature: 0.7,
     });
 

@@ -21,6 +21,7 @@ interface Game {
   name: string;
   concept: string | null;
   updatedAt: Date | null;
+  imageUrl: string | null;
   documents: { id: string; title: string }[];
 }
 
@@ -133,6 +134,7 @@ export default function GamesPage() {
     name: game.name,
     concept: game.concept || "",
     updated_at: typeof game.updatedAt === "string" ? game.updatedAt : (game.updatedAt?.toISOString() || new Date().toISOString()),
+    image_url: game.imageUrl || null,
     documents: game.documents,
   }));
 

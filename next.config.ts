@@ -1,9 +1,13 @@
-/** @type {import('next').NextConfig} */
+import type { NextConfig } from "next";
 
-const nextConfig: import("next").NextConfig = {
+const nextConfig: NextConfig = {
   reactStrictMode: true,
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
+  },
   images: {
-    domains: ["image.api.playstation.com"],
     remotePatterns: [
       {
         protocol: "http",
@@ -13,14 +17,24 @@ const nextConfig: import("next").NextConfig = {
       },
       {
         protocol: "http",
+        hostname: "127.0.0.1",
+        port: "9000",
+        pathname: "/**",
+      },
+      {
+        protocol: "http",
         hostname: "minio",
         port: "9000",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "image.api.playstation.com",
+        pathname: "/**",
+      },
     ],
   },
-  // Enable standalone output for Docker
   output: "standalone",
 };
 
-module.exports = nextConfig;
+export default nextConfig;

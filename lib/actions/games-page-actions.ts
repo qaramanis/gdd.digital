@@ -29,6 +29,7 @@ export async function fetchGamesPageData(userId: string) {
       name: g.name,
       concept: g.concept || null,
       updatedAt: g.updatedAt?.toISOString() || null,
+      imageUrl: g.imageUrl || null,
       documents: g.documents || [],
     }));
 

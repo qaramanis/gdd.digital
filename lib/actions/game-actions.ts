@@ -112,7 +112,7 @@ export async function updateGameWithImage(
     currentImageUrl?: string;
   },
   imageData?: {
-    buffer: number[];
+    base64: string;
     fileName: string;
     contentType: string;
   }
@@ -138,8 +138,8 @@ export async function updateGameWithImage(
         }
       }
 
-      // Upload new image
-      const buffer = Buffer.from(imageData.buffer);
+      // Upload new image - decode base64 to buffer
+      const buffer = Buffer.from(imageData.base64, "base64");
       finalImageUrl = await uploadFile(
         BUCKETS.GAME_IMAGES,
         filePath,

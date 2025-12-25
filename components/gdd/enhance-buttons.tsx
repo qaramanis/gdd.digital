@@ -129,7 +129,7 @@ export function EnhanceButtons({
             )}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" className="w-64">
           {ACTIONS.map((action) => (
             <DropdownMenuItem
               key={action.key}

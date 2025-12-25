@@ -56,14 +56,23 @@ export default function GameDetailView({
 
     try {
       let imageData:
-        | { buffer: number[]; fileName: string; contentType: string }
+        | { base64: string; fileName: string; contentType: string }
         | undefined;
 
       if (updatedGame.imageFile) {
         const file = updatedGame.imageFile;
-        const arrayBuffer = await file.arrayBuffer();
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            const base64Data = result.split(",")[1];
+            resolve(base64Data);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
         imageData = {
-          buffer: Array.from(new Uint8Array(arrayBuffer)),
+          base64,
           fileName: file.name,
           contentType: file.type,
         };
@@ -146,14 +155,15 @@ export default function GameDetailView({
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-6 items-start">
-            <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center overflow-hidden shrink-0">
+            <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center overflow-hidden shrink-0 relative">
               {game.image_url && game.image_url !== "/game-placeholder.jpg" ? (
                 <Image
-                  width={96}
-                  height={96}
+                  fill
+                  sizes="96px"
                   src={game.image_url}
                   alt={game.name}
-                  className="w-full h-full object-cover"
+                  className="object-cover"
+                  unoptimized
                 />
               ) : (
                 <Gamepad2 className="h-10 w-10 text-accent" />

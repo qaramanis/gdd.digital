@@ -29,14 +29,15 @@ export function ViewAllGameCard({ game }: ViewAllGameCardProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Game Preview */}
-          <div className="w-full h-32 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+          <div className="w-full h-32 bg-muted rounded-lg flex items-center justify-center overflow-hidden relative">
             {game.imageUrl ? (
               <Image
-                width={512}
-                height={512}
+                fill
+                sizes="(max-width: 768px) 100vw, 25vw"
                 src={game.imageUrl}
                 alt={game.name}
-                className="w-full h-full object-cover"
+                className="object-cover"
+                unoptimized
               />
             ) : (
               <Gamepad2 className="h-12 w-12 text-accent" />

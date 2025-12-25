@@ -45,14 +45,15 @@ export function GameCard({
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4 flex-1">
-              <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center">
+              <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center overflow-hidden relative">
                 {game.image_url ? (
                   <Image
-                    width={512}
-                    height={512}
+                    fill
+                    sizes="64px"
                     src={game.image_url}
                     alt={game.name}
-                    className="w-full h-full object-cover rounded-lg"
+                    className="object-cover"
+                    unoptimized
                   />
                 ) : (
                   <Gamepad2 className="h-8 w-8 text-accent" />
@@ -183,14 +184,15 @@ export function GameCard({
       <CardContent>
         <div className="space-y-4">
           {/* Game Preview */}
-          <div className="w-full h-32 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+          <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden relative">
             {game.image_url ? (
               <Image
-                width={512}
-                height={512}
+                fill
+                sizes="(max-width: 768px) 100vw, 33vw"
                 src={game.image_url}
                 alt={game.name}
-                className="w-full h-full object-cover"
+                className="object-cover"
+                unoptimized
               />
             ) : (
               <Gamepad2 className="h-12 w-12 text-accent" />

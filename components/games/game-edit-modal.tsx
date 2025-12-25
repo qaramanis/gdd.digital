@@ -158,14 +158,24 @@ const EditGameModal: React.FC<EditGameModalProps> = ({
       }
 
       let imageData:
-        | { buffer: number[]; fileName: string; contentType: string }
+        | { base64: string; fileName: string; contentType: string }
         | undefined;
 
       if (imageFile) {
         try {
-          const arrayBuffer = await imageFile.arrayBuffer();
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const result = reader.result as string;
+              // Remove the data URL prefix (e.g., "data:image/png;base64,")
+              const base64Data = result.split(",")[1];
+              resolve(base64Data);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(imageFile);
+          });
           imageData = {
-            buffer: Array.from(new Uint8Array(arrayBuffer)),
+            base64,
             fileName: imageFile.name,
             contentType: imageFile.type,
           };
@@ -265,14 +275,15 @@ const EditGameModal: React.FC<EditGameModalProps> = ({
             <Label>Game Image</Label>
             <div className="flex items-start gap-4">
               {/* Image Preview */}
-              <div className="w-28 h-28 rounded-lg border overflow-hidden bg-muted flex-shrink-0">
+              <div className="w-28 h-28 rounded-lg border overflow-hidden bg-muted flex-shrink-0 relative">
                 {imagePreview ? (
                   <Image
                     src={imagePreview}
                     alt="Game preview"
-                    width={112}
-                    height={112}
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="112px"
+                    className="object-cover"
+                    unoptimized
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">

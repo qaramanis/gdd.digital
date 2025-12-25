@@ -2,15 +2,26 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter, notFound } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { GDD_SECTIONS, getSectionNavigation, getSection } from "@/lib/gdd/sections";
+import {
+  GDD_SECTIONS,
+  getSectionNavigation,
+  getSection,
+} from "@/lib/gdd/sections";
 import {
   saveGDDSection,
-  getGDDSection,
+  getAllGDDSections,
   GDDSectionContent,
 } from "@/lib/actions/gdd-actions";
+import type { AllSectionsContent } from "@/lib/ai/prompts";
 import { getUserPreferences } from "@/lib/actions/preferences-actions";
 import { fetchGamePageData } from "@/lib/actions/game-actions";
 import { useUser } from "@/providers/user-context";
@@ -39,13 +50,17 @@ export default function GDDSectionPage() {
 
   const [gameContext, setGameContext] = useState<GameContext | null>(null);
   const [content, setContent] = useState<GDDSectionContent>({});
+  const [allSectionsContent, setAllSectionsContent] =
+    useState<AllSectionsContent>({});
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<AIModelId>("claude-sonnet");
+  const [selectedModel, setSelectedModel] =
+    useState<AIModelId>("claude-sonnet");
 
   const contentRef = useRef<GDDSectionContent>({});
+  const allSectionsRef = useRef<AllSectionsContent>({});
 
   useEffect(() => {
     if (!userLoading && userId && section) {
@@ -56,9 +71,9 @@ export default function GDDSectionPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [gameResult, sectionResult, prefsResult] = await Promise.all([
+      const [gameResult, allSectionsResult, prefsResult] = await Promise.all([
         fetchGamePageData(gameId, userId!),
-        getGDDSection(gameId, sectionSlug),
+        getAllGDDSections(gameId),
         getUserPreferences(userId!),
       ]);
 
@@ -71,9 +86,16 @@ export default function GDDSectionPage() {
         });
       }
 
-      if (sectionResult.success && sectionResult.content) {
-        setContent(sectionResult.content);
-        contentRef.current = sectionResult.content;
+      if (allSectionsResult.success && allSectionsResult.sections) {
+        // Set all sections content for AI context
+        setAllSectionsContent(allSectionsResult.sections);
+        allSectionsRef.current = allSectionsResult.sections;
+
+        // Set current section content
+        const currentSectionContent =
+          allSectionsResult.sections[sectionSlug] || {};
+        setContent(currentSectionContent);
+        contentRef.current = currentSectionContent;
       }
 
       if (prefsResult.success && prefsResult.preferences) {
@@ -88,14 +110,29 @@ export default function GDDSectionPage() {
 
   const handleSubSectionChange = useCallback(
     (subSectionId: string, value: string) => {
+      // Update current section content
       setContent((prev) => {
         const updated = { ...prev, [subSectionId]: value };
         contentRef.current = updated;
         return updated;
       });
+
+      // Also update allSectionsContent to keep it in sync for AI context
+      setAllSectionsContent((prev) => {
+        const updated = {
+          ...prev,
+          [sectionSlug]: {
+            ...prev[sectionSlug],
+            [subSectionId]: value,
+          },
+        };
+        allSectionsRef.current = updated;
+        return updated;
+      });
+
       setHasUnsavedChanges(true);
     },
-    []
+    [sectionSlug],
   );
 
   const handleSave = useCallback(async () => {
@@ -107,7 +144,7 @@ export default function GDDSectionPage() {
         gameId,
         sectionSlug,
         contentRef.current,
-        userId
+        userId,
       );
 
       if (result.success) {
@@ -163,7 +200,7 @@ export default function GDDSectionPage() {
       contentRef.current = newContent;
       setHasUnsavedChanges(true);
     },
-    [section]
+    [section],
   );
 
   if (!section) {
@@ -193,10 +230,7 @@ export default function GDDSectionPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <ModelSelector
-            userId={userId!}
-            onModelChange={setSelectedModel}
-          />
+          <ModelSelector userId={userId!} onModelChange={setSelectedModel} />
           <EnhanceButtons
             sectionType={sectionSlug}
             gameContext={gameContext}
@@ -259,6 +293,7 @@ export default function GDDSectionPage() {
               subSectionType={subSection.id}
               sectionType={sectionSlug}
               gameContext={gameContext}
+              allContent={allSectionsContent}
               initialContent={content[subSection.id] || ""}
               onChange={(value) => handleSubSectionChange(subSection.id, value)}
               modelId={selectedModel}
@@ -272,7 +307,9 @@ export default function GDDSectionPage() {
         {navigation.prev ? (
           <Button
             variant="outline"
-            onClick={() => router.push(`/games/${gameId}/gdd/${navigation.prev!.slug}`)}
+            onClick={() =>
+              router.push(`/games/${gameId}/gdd/${navigation.prev!.slug}`)
+            }
             className="gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -285,7 +322,9 @@ export default function GDDSectionPage() {
         {navigation.next ? (
           <Button
             variant="outline"
-            onClick={() => router.push(`/games/${gameId}/gdd/${navigation.next!.slug}`)}
+            onClick={() =>
+              router.push(`/games/${gameId}/gdd/${navigation.next!.slug}`)
+            }
             className="gap-2"
           >
             {navigation.next.title}
