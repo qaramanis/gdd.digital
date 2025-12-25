@@ -155,7 +155,7 @@ export default function GameDetailView({
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-6 items-start">
-            <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center overflow-hidden shrink-0 relative">
+            <div className="w-24 h-24 rounded-lg flex items-center justify-center overflow-hidden shrink-0 relative">
               {game.image_url && game.image_url !== "/game-placeholder.jpg" ? (
                 <Image
                   fill

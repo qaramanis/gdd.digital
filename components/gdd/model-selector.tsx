@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { Check, ChevronDown, Sparkles, Loader2, Bot } from "lucide-react";
+import { Check, ChevronDown, Loader2, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   getUserPreferences,
@@ -33,12 +33,7 @@ interface ModelOption {
   available: boolean;
 }
 
-const providerIcons: Record<string, string> = {
-  anthropic: "Claude",
-  openai: "GPT",
-  google: "Gemini",
-  xai: "Grok",
-};
+
 
 export function ModelSelector({ userId, onModelChange }: ModelSelectorProps) {
   const [selectedModel, setSelectedModel] =

@@ -184,7 +184,7 @@ export function GameCard({
       <CardContent>
         <div className="space-y-4">
           {/* Game Preview */}
-          <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden relative">
+          <div className="w-full aspect-square rounded-lg flex items-center justify-center overflow-hidden relative">
             {game.image_url ? (
               <Image
                 fill
@@ -201,9 +201,7 @@ export function GameCard({
 
           {/* Concept */}
           {game.concept && (
-            <p className="text-sm text-accent line-clamp-2">
-              {game.concept}
-            </p>
+            <p className="text-sm text-accent line-clamp-2">{game.concept}</p>
           )}
 
           {/* Metadata */}

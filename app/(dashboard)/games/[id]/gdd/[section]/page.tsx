@@ -296,6 +296,7 @@ export default function GDDSectionPage() {
               allContent={allSectionsContent}
               initialContent={content[subSection.id] || ""}
               onChange={(value) => handleSubSectionChange(subSection.id, value)}
+              onAcceptGenerated={handleSave}
               modelId={selectedModel}
             />
           ))}

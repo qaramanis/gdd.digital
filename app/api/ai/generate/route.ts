@@ -73,7 +73,55 @@ export async function POST(request: Request) {
       temperature: 0.7,
     });
 
-    return result.toTextStreamResponse();
+    // Get the async iterator for the text stream
+    const textIterator = result.textStream[Symbol.asyncIterator]();
+
+    // Await the first chunk to trigger the API call and catch any initial errors
+    // This happens BEFORE we return the response, so we can return a proper error status
+    let firstChunk: string;
+    try {
+      const first = await textIterator.next();
+      if (first.done) {
+        return new Response(
+          JSON.stringify({ error: "No content generated" }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      firstChunk = first.value;
+    } catch (error) {
+      console.error("AI generation error (first chunk):", error);
+      return new Response(
+        JSON.stringify({ error: "Failed to generate content" }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // First chunk succeeded - now stream the rest
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        // Send the first chunk we already received
+        controller.enqueue(encoder.encode(firstChunk));
+
+        // Continue streaming remaining chunks
+        try {
+          while (true) {
+            const { done, value } = await textIterator.next();
+            if (done) break;
+            controller.enqueue(encoder.encode(value));
+          }
+          controller.close();
+        } catch (error) {
+          console.error("AI streaming error:", error);
+          controller.enqueue(encoder.encode("\n__GENERATION_ERROR__"));
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
   } catch (error) {
     console.error("AI generation error:", error);
     return new Response(

@@ -10,11 +10,11 @@ import {
   Check,
   X,
   Sparkles,
-  AlertCircle,
   RotateCcw,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import type { AIModelId } from "@/database/drizzle/schema/preferences";
+import { AI_MODELS, type AIModelId } from "@/database/drizzle/schema/preferences";
 import type { AllSectionsContent } from "@/lib/ai/prompts";
 
 interface GameContext {
@@ -33,6 +33,7 @@ interface SubSectionEditorProps {
   allContent: AllSectionsContent;
   initialContent?: string;
   onChange?: (content: string) => void;
+  onAcceptGenerated?: () => void;
   modelId?: AIModelId;
 }
 
@@ -45,11 +46,11 @@ export function SubSectionEditor({
   allContent,
   initialContent = "",
   onChange,
+  onAcceptGenerated,
   modelId,
 }: SubSectionEditorProps) {
   const [generatedContent, setGeneratedContent] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generationError, setGenerationError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const editor = useEditor({
@@ -80,7 +81,6 @@ export function SubSectionEditor({
 
     setGeneratedContent("");
     setIsGenerating(true);
-    setGenerationError(null);
     abortControllerRef.current = new AbortController();
 
     try {
@@ -97,14 +97,16 @@ export function SubSectionEditor({
         signal: abortControllerRef.current.signal,
       });
 
-      // Check for validation errors
+      // Check for errors
       if (!response.ok) {
         const errorData = await response.json();
         if (errorData.code === "INSUFFICIENT_CONTEXT") {
-          setGenerationError(errorData.error);
-          return;
+          toast.error(errorData.error);
+        } else {
+          const modelName = modelId ? AI_MODELS[modelId]?.name : "the AI model";
+          toast.error(`An error occurred with ${modelName}, try a different model`);
         }
-        throw new Error(errorData.error || "Failed to generate content");
+        return;
       }
 
       const reader = response.body?.getReader();
@@ -118,12 +120,22 @@ export function SubSectionEditor({
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
         fullContent += chunk;
+
+        // Check for streaming error marker
+        if (fullContent.includes("__GENERATION_ERROR__")) {
+          const modelName = modelId ? AI_MODELS[modelId]?.name : "the AI model";
+          toast.error(`An error occurred with ${modelName}, try a different model`);
+          setGeneratedContent("");
+          return;
+        }
+
         setGeneratedContent(fullContent.trim());
       }
     } catch (error: unknown) {
       if (error instanceof Error && error.name !== "AbortError") {
         console.error("Generation error:", error);
-        setGenerationError("Failed to generate content. Please try again.");
+        const modelName = modelId ? AI_MODELS[modelId]?.name : "the AI model";
+        toast.error(`An error occurred with ${modelName}, try a different model`);
       }
     } finally {
       setIsGenerating(false);
@@ -146,7 +158,10 @@ export function SubSectionEditor({
     editor.commands.setContent(htmlContent);
     onChange?.(htmlContent);
     setGeneratedContent("");
-  }, [editor, generatedContent, onChange]);
+
+    // Trigger autosave when AI suggestion is accepted
+    onAcceptGenerated?.();
+  }, [editor, generatedContent, onChange, onAcceptGenerated]);
 
   const dismissGenerated = useCallback(() => {
     setGeneratedContent("");
@@ -201,25 +216,6 @@ export function SubSectionEditor({
           )}
         </Button>
       </div>
-
-      {/* Generation error message */}
-      {generationError && (
-        <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
-          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-          <div className="flex-1">
-            <p className="font-medium">Cannot generate content</p>
-            <p className="text-destructive/80">{generationError}</p>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setGenerationError(null)}
-            className="h-6 w-6 p-0 shrink-0 hover:bg-destructive/20"
-          >
-            <X className="h-3 w-3" />
-          </Button>
-        </div>
-      )}
 
       <div className="relative">
         <div
