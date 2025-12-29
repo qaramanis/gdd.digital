@@ -8,9 +8,9 @@ export interface GameData {
   concept?: string;
   startDate?: string;
   timeline?: string;
-  platforms?: string[];
   sections?: string[];
   imageUrl?: string;
+  completedAt?: Date | null;
 }
 
 /**

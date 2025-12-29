@@ -1,7 +1,6 @@
 export interface GameContext {
   name: string;
   concept: string;
-  platforms: string[];
   timeline?: string;
 }
 
@@ -190,7 +189,6 @@ export function buildCompletionPrompt(context: CompletionContext): string {
   const gameInfo = `
 Game Name: ${gameContext.name}
 Game Concept: ${gameContext.concept}
-Platforms: ${gameContext.platforms.join(", ")}
 ${gameContext.timeline ? `Timeline: ${gameContext.timeline}` : ""}
 `.trim();
 
@@ -463,7 +461,6 @@ export function buildGenerationPrompt(context: GenerationContext): string {
 ## Game Information
 - **Name:** ${gameContext.name || "Untitled Game"}
 - **Concept:** ${gameContext.concept || "Not specified"}
-- **Platforms:** ${gameContext.platforms?.length > 0 ? gameContext.platforms.join(", ") : "Not specified"}
 ${gameContext.timeline ? `- **Timeline:** ${gameContext.timeline}` : ""}
 `.trim();
 

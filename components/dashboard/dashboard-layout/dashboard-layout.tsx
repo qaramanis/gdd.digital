@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 import {
   AudioWaveform,
-  Bot,
+  Bell,
+  BookOpen,
   GalleryVerticalEnd,
   Home,
   Inbox,
@@ -174,7 +175,10 @@ export default function DashboardLayout({
                 <Search className="h-4 w-4" />
               </Button>
               <Button variant="ghost" size="icon">
-                <Bot className="h-4 w-4" />
+                <Bell className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon">
+                <BookOpen className="h-4 w-4" />
               </Button>
             </div>
           </header>

@@ -15,14 +15,12 @@ export interface SceneMetadata {
   description?: string;
   engine: "unity" | "unreal" | "godot" | "custom";
   engineVersion?: string;
-  sectionId?: string;
   tags?: string[];
 }
 
 export interface Scene {
   id: string;
   gameId: string;
-  documentSectionId?: string | null;
   name: string;
   description?: string | null;
   engine: string;
@@ -42,7 +40,6 @@ export interface Scene {
   updatedAt: Date | null;
   createdBy: string;
   tags?: { tag: string }[];
-  section?: { title: string } | null;
 }
 
 export class SceneService {
@@ -72,7 +69,6 @@ export class SceneService {
         .insert(schema.gameScenes)
         .values({
           gameId,
-          documentSectionId: metadata.sectionId,
           name: metadata.name,
           description: metadata.description,
           engine: metadata.engine,
@@ -117,7 +113,6 @@ export class SceneService {
       const scene = await updateSceneData(sceneId, {
         name: updates.name,
         description: updates.description ?? undefined,
-        documentSectionId: updates.documentSectionId ?? undefined,
         status: updates.status ?? undefined,
         isPublic: updates.isPublic ?? undefined,
       });

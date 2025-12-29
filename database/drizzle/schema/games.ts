@@ -17,9 +17,9 @@ export const games = pgTable("games", {
   concept: text("concept"),
   startDate: text("start_date"),
   timeline: text("timeline"),
-  platforms: jsonb("platforms").$type<string[]>().default([]),
   sections: jsonb("sections").$type<string[]>().default([]),
   imageUrl: text("image_url"),
+  completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

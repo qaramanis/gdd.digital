@@ -1,15 +1,11 @@
 import { pgTable, text, timestamp, uuid, boolean } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { user } from "./users";
-import { documents } from "./documents";
 import { teams } from "./teams";
 import { games } from "./games";
 
 export const invitations = pgTable("invitations", {
   id: uuid("id").primaryKey().defaultRandom(),
-  documentId: uuid("document_id").references(() => documents.id, {
-    onDelete: "cascade",
-  }),
   teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }),
   gameId: uuid("game_id").references(() => games.id, { onDelete: "cascade" }),
   inviterId: text("inviter_id")
@@ -27,10 +23,6 @@ export const invitations = pgTable("invitations", {
 });
 
 export const invitationsRelations = relations(invitations, ({ one }) => ({
-  document: one(documents, {
-    fields: [invitations.documentId],
-    references: [documents.id],
-  }),
   team: one(teams, {
     fields: [invitations.teamId],
     references: [teams.id],
@@ -44,35 +36,3 @@ export const invitationsRelations = relations(invitations, ({ one }) => ({
     references: [user.id],
   }),
 }));
-
-export const documentCollaborators = pgTable("document_collaborators", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  documentId: uuid("document_id")
-    .notNull()
-    .references(() => documents.id, { onDelete: "cascade" }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  permission: text("permission").notNull().default("viewer"),
-  canShare: boolean("can_share").default(false),
-  addedBy: text("added_by").references(() => user.id),
-  addedAt: timestamp("added_at").defaultNow(),
-});
-
-export const documentCollaboratorsRelations = relations(
-  documentCollaborators,
-  ({ one }) => ({
-    document: one(documents, {
-      fields: [documentCollaborators.documentId],
-      references: [documents.id],
-    }),
-    user: one(user, {
-      fields: [documentCollaborators.userId],
-      references: [user.id],
-    }),
-    addedByUser: one(user, {
-      fields: [documentCollaborators.addedBy],
-      references: [user.id],
-    }),
-  })
-);

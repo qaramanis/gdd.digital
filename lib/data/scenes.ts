@@ -1,14 +1,12 @@
 import "server-only";
 
 import { db, schema } from "@/database/drizzle";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import {
   uploadFile,
   deleteFile,
-  deleteFolder,
   BUCKETS,
   getBucketForFile,
-  getPublicUrl,
 } from "@/lib/storage/minio-client";
 
 export interface SceneMetadata {
@@ -16,7 +14,6 @@ export interface SceneMetadata {
   description?: string;
   engine: "unity" | "unreal" | "godot" | "custom";
   engineVersion?: string;
-  sectionId?: string;
   tags?: string[];
 }
 
@@ -51,7 +48,6 @@ export async function uploadScene(
     .insert(schema.gameScenes)
     .values({
       gameId,
-      documentSectionId: metadata.sectionId,
       name: metadata.name,
       description: metadata.description,
       engine: metadata.engine,
@@ -94,9 +90,6 @@ export async function getScenesByGame(gameId: string) {
     orderBy: [desc(schema.gameScenes.createdAt)],
     with: {
       tags: true,
-      section: {
-        columns: { id: true, title: true },
-      },
       creator: {
         columns: { id: true, name: true, email: true },
       },
@@ -112,7 +105,6 @@ export async function getScene(sceneId: string) {
     where: eq(schema.gameScenes.id, sceneId),
     with: {
       tags: true,
-      section: true,
       creator: true,
       game: true,
     },
@@ -127,7 +119,6 @@ export async function updateScene(
   data: Partial<{
     name: string;
     description: string;
-    documentSectionId: string;
     status: string;
     isPublic: boolean;
   }>
@@ -223,32 +214,4 @@ export async function updateSceneTags(sceneId: string, tags: string[]) {
   if (tags.length > 0) {
     await addSceneTags(sceneId, tags);
   }
-}
-
-/**
- * Link a scene to a document section
- */
-export async function linkSceneToSection(
-  sceneId: string,
-  sectionId: string | null
-) {
-  const [updated] = await db
-    .update(schema.gameScenes)
-    .set({ documentSectionId: sectionId, updatedAt: new Date() })
-    .where(eq(schema.gameScenes.id, sceneId))
-    .returning();
-  return updated;
-}
-
-/**
- * Get scenes linked to a document section
- */
-export async function getSectionScenes(sectionId: string) {
-  return db.query.gameScenes.findMany({
-    where: eq(schema.gameScenes.documentSectionId, sectionId),
-    orderBy: [desc(schema.gameScenes.createdAt)],
-    with: {
-      tags: true,
-    },
-  });
 }

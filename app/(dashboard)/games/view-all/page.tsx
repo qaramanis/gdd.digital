@@ -15,7 +15,6 @@ interface Game {
   concept: string;
   imageUrl: string | null;
   startDate: string | null;
-  platforms: string[];
 }
 
 export default function ViewAllGamesPage() {
@@ -24,6 +23,13 @@ export default function ViewAllGamesPage() {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Redirect to sign-in if no user after loading completes
+  useEffect(() => {
+    if (!userLoading && !userId) {
+      router.push("/sign-in");
+    }
+  }, [userLoading, userId, router]);
 
   useEffect(() => {
     if (!userLoading && userId) {
@@ -54,7 +60,7 @@ export default function ViewAllGamesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">All Games</h1>
-          <p className="text-muted-foreground">
+          <p className="text-foreground">
             Browse all your game projects in one place
           </p>
         </div>

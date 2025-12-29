@@ -17,7 +17,7 @@ export default function GDDLayout({ children }: GDDLayoutProps) {
   const gameId = params.id as string;
 
   const currentSection = GDD_SECTIONS.find((s) =>
-    pathname.includes(`/gdd/${s.slug}`),
+    pathname.includes(`/document/${s.slug}`),
   );
 
   return (
@@ -31,11 +31,11 @@ export default function GDDLayout({ children }: GDDLayoutProps) {
           </div>
           <nav className="space-y-2">
             {GDD_SECTIONS.map((section) => {
-              const isActive = pathname.includes(`/gdd/${section.slug}`);
+              const isActive = pathname.includes(`/document/${section.slug}`);
               return (
                 <Link
                   key={section.slug}
-                  href={`/games/${gameId}/gdd/${section.slug}`}
+                  href={`/games/${gameId}/document/${section.slug}`}
                   className={cn(
                     "flex items-center gap-4 px-2 py-1 text-sm rounded-lg transition-all duration-300",
                     isActive
@@ -57,13 +57,13 @@ export default function GDDLayout({ children }: GDDLayoutProps) {
       {/* Main Content */}
       <main className="flex-1 p-6 overflow-auto">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+        <div className="flex items-center gap-2 text-sm text-accent mb-6">
           <Link href={`/games/${gameId}`} className="hover:text-foreground">
             Game
           </Link>
           <ChevronRight className="h-4 w-4" />
-          <Link href={`/games/${gameId}/gdd`} className="hover:text-foreground">
-            GDD
+          <Link href={`/games/${gameId}/document`} className="hover:text-foreground">
+            Document
           </Link>
           {currentSection && (
             <>

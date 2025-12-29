@@ -1,7 +1,6 @@
 "use server";
 
 import { getUserGames, getGameForUser, getGame, updateGame as updateGameData, createGame as createGameData, GameData } from "@/lib/data/games";
-import { getDocumentsByGame } from "@/lib/data/documents";
 import { uploadFile, deleteFile, BUCKETS } from "@/lib/storage/minio-client";
 
 // Helper to safely serialize dates that might be Date objects or strings
@@ -31,7 +30,6 @@ export async function fetchUserGames(userId: string) {
       imageUrl: g.imageUrl || null,
       createdAt: toISOStringOrEmpty(g.createdAt),
       updatedAt: toISOStringOrEmpty(g.updatedAt),
-      platforms: g.platforms || [],
       sections: g.sections || [],
       startDate: g.startDate || null,
       timeline: g.timeline || null,
@@ -46,21 +44,7 @@ export async function fetchGamePageData(gameId: string, userId: string) {
   try {
     const game = await getGameForUser(gameId, userId);
     if (!game) {
-      return { game: null, document: null, sections: [], error: "Game not found or you don't have access to it" };
-    }
-
-    const docs = await getDocumentsByGame(gameId);
-    const document = docs[0] || null;
-
-    let sections: any[] = [];
-    if (document && document.sections) {
-      sections = document.sections.map((s) => ({
-        id: s.id,
-        document_id: s.documentId,
-        title: s.title,
-        content: s.content,
-        order: s.orderIndex,
-      }));
+      return { game: null, error: "Game not found or you don't have access to it" };
     }
 
     return {
@@ -69,27 +53,19 @@ export async function fetchGamePageData(gameId: string, userId: string) {
         name: game.name,
         concept: game.concept || "",
         image_url: game.imageUrl || "",
-        platforms: game.platforms || [],
         sections: game.sections || [],
         start_date: game.startDate || "",
         timeline: game.timeline || "",
+        completed_at: toISOStringOrEmpty(game.completedAt),
         created_at: toISOStringOrEmpty(game.createdAt),
         updated_at: toISOStringOrEmpty(game.updatedAt),
         user_id: game.userId,
       },
-      document: document ? {
-        id: document.id,
-        game_id: document.gameId,
-        title: document.title,
-        created_at: toISOStringOrEmpty(document.createdAt),
-        updated_at: toISOStringOrEmpty(document.updatedAt),
-      } : null,
-      sections,
       error: null,
     };
   } catch (error) {
     console.error("Error fetching game page data:", error);
-    return { game: null, document: null, sections: [], error: "Failed to load game data" };
+    return { game: null, error: "Failed to load game data" };
   }
 }
 
@@ -172,5 +148,20 @@ export async function updateGameWithImage(
   } catch (error) {
     console.error("Error updating game with image:", error);
     return { success: false, error: "Failed to update game" };
+  }
+}
+
+export async function updateGameCompletionStatus(
+  gameId: string,
+  userId: string,
+  isCompleted: boolean
+) {
+  try {
+    const completedAt = isCompleted ? new Date() : null;
+    await updateGameData(gameId, userId, { completedAt });
+    return { success: true, completedAt: toISOStringOrEmpty(completedAt) };
+  } catch (error) {
+    console.error("Error updating game completion status:", error);
+    return { success: false, error: "Failed to update completion status" };
   }
 }

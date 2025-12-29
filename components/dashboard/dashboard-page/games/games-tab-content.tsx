@@ -23,7 +23,6 @@ export default function GamesTabContent({ games }: { games: Game[] }) {
               ? `${game.concept.substring(0, 50)}${game.concept.length > 50 ? "..." : ""}`
               : ""
           }
-          badge={game.platforms?.[0]}
           imageUrl={game.image_url}
           onClick={() => router.push(`/games/${game.id}`)}
         />

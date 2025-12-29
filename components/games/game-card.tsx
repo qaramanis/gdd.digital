@@ -36,7 +36,6 @@ export function GameCard({
   onView,
   onEdit,
 }: GameCardProps) {
-  const hasPlatforms = game.platforms && game.platforms.length > 0;
   const hasDocument = game.documents && game.documents.length > 0;
 
   if (viewMode === "list") {
@@ -87,19 +86,6 @@ export function GameCard({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {hasPlatforms && (
-                  <div className="flex gap-1">
-                    {game.platforms.map((platform: string) => (
-                      <Badge
-                        key={platform}
-                        variant="secondary"
-                        className="text-xs"
-                      >
-                        {platform}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm">
@@ -226,15 +212,6 @@ export function GameCard({
               <div className="flex items-center justify-between">
                 <span className="text-accent">Timeline</span>
                 <span>{game.timeline}</span>
-              </div>
-            )}
-            {hasPlatforms && (
-              <div className="flex items-center gap-2 pt-2">
-                {game.platforms.map((platform: string) => (
-                  <Badge key={platform} variant="secondary" className="text-xs">
-                    {platform}
-                  </Badge>
-                ))}
               </div>
             )}
           </div>

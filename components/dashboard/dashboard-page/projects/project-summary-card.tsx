@@ -12,7 +12,7 @@ export default function ProjectSummaryCard({ data }: { data: DashboardData }) {
 
   const summaryItems = [
     { label: "Games", value: stats.totalGames },
-    { label: "Sections", value: stats.documentSections },
+    { label: "Notes", value: stats.totalNotes },
     {
       label: "Collaborators",
       value: teams.reduce((acc, team) => acc + (team.member_count || 0), 0),

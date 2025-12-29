@@ -23,7 +23,7 @@ export default function ProjectListItem({
       onClick={onClick}
     >
       <div className="flex items-center space-x-4">
-        <div className="w-10 h-10 bg-primary/10 rounded flex items-center justify-center overflow-hidden relative">
+        <div className="w-10 h-10 rounded flex items-center justify-center overflow-hidden relative">
           {imageUrl ? (
             <Image
               fill

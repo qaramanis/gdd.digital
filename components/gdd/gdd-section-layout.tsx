@@ -108,7 +108,7 @@ export function GDDSectionLayout({
         {prevSection ? (
           <Button
             variant="outline"
-            onClick={() => router.push(`/games/${gameId}/gdd/${prevSection.slug}`)}
+            onClick={() => router.push(`/games/${gameId}/document/${prevSection.slug}`)}
             className="gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -121,7 +121,7 @@ export function GDDSectionLayout({
         {nextSection ? (
           <Button
             variant="outline"
-            onClick={() => router.push(`/games/${gameId}/gdd/${nextSection.slug}`)}
+            onClick={() => router.push(`/games/${gameId}/document/${nextSection.slug}`)}
             className="gap-2"
           >
             {nextSection.title}

@@ -14,7 +14,6 @@ import type { AIModelId } from "@/database/drizzle/schema/preferences";
 interface GameContext {
   name: string;
   concept: string;
-  platforms: string[];
   timeline?: string;
 }
 

@@ -692,12 +692,6 @@ export default function GameScenesList({
                           <span>{formatFileSize(scene.fileSize)}</span>
                         )}
                         {scene.fileFormat && <span>{scene.fileFormat}</span>}
-                        {scene.section && (
-                          <span className="flex items-center gap-1">
-                            <FileCode className="h-3 w-3" />
-                            {scene.section.title}
-                          </span>
-                        )}
                       </div>
                       {scene.tags && scene.tags.length > 0 && (
                         <div className="flex gap-1 mt-2">

@@ -1,8 +1,7 @@
 "use client";
 
-import { Calendar, Gamepad2, Monitor } from "lucide-react";
+import { Calendar, Gamepad2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/date-utils";
 import Image from "next/image";
 import Link from "next/link";
@@ -13,14 +12,11 @@ interface ViewAllGameCardProps {
     name: string;
     concept?: string | null;
     startDate?: string | null;
-    platforms?: string[];
     imageUrl?: string | null;
   };
 }
 
 export function ViewAllGameCard({ game }: ViewAllGameCardProps) {
-  const hasPlatforms = game.platforms && game.platforms.length > 0;
-
   return (
     <Link href={`/games/${game.id}`}>
       <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
@@ -58,32 +54,6 @@ export function ViewAllGameCard({ game }: ViewAllGameCardProps) {
               <span>
                 {game.startDate ? formatDate(game.startDate) : "Not set"}
               </span>
-            </div>
-
-            {/* Platforms */}
-            <div className="flex items-center gap-2">
-              <Monitor className="h-4 w-4 text-accent" />
-              <span className="text-accent">Platforms:</span>
-              {hasPlatforms ? (
-                <div className="flex flex-wrap gap-1">
-                  {game.platforms!.slice(0, 3).map((platform: string) => (
-                    <Badge
-                      key={platform}
-                      variant="secondary"
-                      className="text-xs"
-                    >
-                      {platform}
-                    </Badge>
-                  ))}
-                  {game.platforms!.length > 3 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{game.platforms!.length - 3}
-                    </Badge>
-                  )}
-                </div>
-              ) : (
-                <span className="text-muted-foreground">None</span>
-              )}
             </div>
           </div>
         </CardContent>

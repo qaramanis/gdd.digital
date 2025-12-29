@@ -75,7 +75,7 @@ const EditGameModal: React.FC<EditGameModalProps> = ({
   }, [game, isOpen]);
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -196,7 +196,7 @@ const EditGameModal: React.FC<EditGameModalProps> = ({
           concept: formData.concept.trim(),
           currentImageUrl: game.image_url,
         },
-        imageData
+        imageData,
       );
 
       if (!result.success) {
@@ -256,7 +256,7 @@ const EditGameModal: React.FC<EditGameModalProps> = ({
               name="concept"
               value={formData.concept}
               onChange={handleInputChange}
-              rows={4}
+              rows={6}
               placeholder="Enter game description or concept"
               disabled={isLoading}
               className="resize-none"
@@ -321,7 +321,9 @@ const EditGameModal: React.FC<EditGameModalProps> = ({
                   PNG, JPG, GIF up to 5MB
                 </p>
                 {errors.image && (
-                  <p className="mt-1 text-sm text-destructive">{errors.image}</p>
+                  <p className="mt-1 text-sm text-destructive">
+                    {errors.image}
+                  </p>
                 )}
               </div>
             </div>
@@ -342,13 +344,13 @@ const EditGameModal: React.FC<EditGameModalProps> = ({
           <Button onClick={handleSubmit} disabled={isLoading}>
             {isLoading ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
                 Saving...
               </>
             ) : (
               <>
-                <Save className="w-4 h-4 mr-2" />
-                Save Changes
+                <Save className="w-4 h-4" />
+                Save
               </>
             )}
           </Button>

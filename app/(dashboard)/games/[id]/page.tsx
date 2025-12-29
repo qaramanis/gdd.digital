@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { fetchGamePageData } from "@/lib/actions/game-actions";
+import { getAllGDDSections, GDDSectionContent } from "@/lib/actions/gdd-actions";
 import { useUser } from "@/providers/user-context";
 import GameDetailView from "@/components/games/game-detail-view";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,29 +15,13 @@ interface Game {
   name: string;
   concept: string;
   image_url: string;
-  platforms: string[];
   sections: string[];
   start_date: string;
   timeline: string;
+  completed_at: string;
   created_at: string;
   updated_at: string;
   user_id: string;
-}
-
-interface Document {
-  id: string;
-  game_id: string | null;
-  title: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface DocumentSection {
-  id: string;
-  document_id: string;
-  title: string;
-  content: string;
-  order: number;
 }
 
 export default function GamePage() {
@@ -44,8 +29,7 @@ export default function GamePage() {
   const router = useRouter();
   const { userId, loading: userLoading } = useUser();
   const [game, setGame] = useState<Game | null>(null);
-  const [document, setDocument] = useState<Document | null>(null);
-  const [sections, setSections] = useState<DocumentSection[]>([]);
+  const [gddSections, setGddSections] = useState<Record<string, GDDSectionContent>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,16 +44,18 @@ export default function GamePage() {
       setLoading(true);
       setError(null);
 
-      const data = await fetchGamePageData(params.id as string, userId!);
+      const [gameData, sectionsData] = await Promise.all([
+        fetchGamePageData(params.id as string, userId!),
+        getAllGDDSections(params.id as string),
+      ]);
 
-      if (data.error) {
-        setError(data.error);
+      if (gameData.error) {
+        setError(gameData.error);
         return;
       }
 
-      setGame(data.game as Game);
-      setDocument(data.document as Document);
-      setSections(data.sections as DocumentSection[]);
+      setGame(gameData.game as Game);
+      setGddSections(sectionsData.sections || {});
     } catch (err: any) {
       console.error("Error fetching game data:", err);
       setError(err.message || "Failed to load game data");
@@ -77,6 +63,13 @@ export default function GamePage() {
       setLoading(false);
     }
   };
+
+  // Redirect to sign-in if no user after loading completes
+  useEffect(() => {
+    if (!userLoading && !userId) {
+      router.push("/sign-in");
+    }
+  }, [userLoading, userId, router]);
 
   if (loading || userLoading || !userId) {
     return <GameDetailSkeleton />;
@@ -87,7 +80,7 @@ export default function GamePage() {
       <div className="flex flex-col items-center justify-center h-64">
         <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
         <p className="text-lg mb-4">{error}</p>
-        <Button onClick={() => router.push("/games")}>Back to Games</Button>
+        <Button onClick={() => router.push("/sign-in")}>Sign In</Button>
       </div>
     );
   }
@@ -101,7 +94,7 @@ export default function GamePage() {
     );
   }
 
-  return <GameDetailView game={game} document={document} sections={sections} />;
+  return <GameDetailView game={game} gddSections={gddSections} />;
 }
 
 function GameDetailSkeleton() {

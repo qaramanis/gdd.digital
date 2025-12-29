@@ -17,11 +17,6 @@ export default function StatsGrid({ data }: { data: DashboardData }) {
         }
       />
       <StatCard
-        title="Documents"
-        value={stats.totalDocuments}
-        description={`${stats.documentSections} total sections`}
-      />
-      <StatCard
         title="Teams"
         value={stats.totalTeams}
         description={`${teams.reduce((acc, team) => acc + (team.member_count || 0), 0)} total members`}
@@ -30,6 +25,11 @@ export default function StatsGrid({ data }: { data: DashboardData }) {
         title="Notes"
         value={stats.totalNotes}
         description="Personal notes & ideas"
+      />
+      <StatCard
+        title="Recent Activity"
+        value={stats.recentActivities}
+        description="Actions logged"
       />
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,6 +14,7 @@ import { Note } from "@/types/notes";
 import { useUser } from "@/providers/user-context";
 
 export default function NotesPage() {
+  const router = useRouter();
   const { userId, loading: userLoading } = useUser();
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,6 +25,13 @@ export default function NotesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
+
+  // Redirect to sign-in if no user after loading completes
+  useEffect(() => {
+    if (!userLoading && !userId) {
+      router.push("/sign-in");
+    }
+  }, [userLoading, userId, router]);
 
   useEffect(() => {
     async function fetchNotes() {

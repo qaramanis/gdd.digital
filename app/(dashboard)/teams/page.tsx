@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   fetchTeamsData,
   createTeam,
@@ -110,7 +111,8 @@ interface Notification {
 }
 
 export default function TeamsPage() {
-  const { userId, user } = useUser();
+  const router = useRouter();
+  const { userId, user, loading: userLoading } = useUser();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("invitations");
 
@@ -132,6 +134,13 @@ export default function TeamsPage() {
   // Notifications state
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // Redirect to sign-in if no user after loading completes
+  useEffect(() => {
+    if (!userLoading && !userId) {
+      router.push("/sign-in");
+    }
+  }, [userLoading, userId, router]);
 
   useEffect(() => {
     if (userId) {
@@ -254,7 +263,7 @@ export default function TeamsPage() {
     }
   };
 
-  if (loading) {
+  if (loading || userLoading || !userId) {
     return (
       <div className="container mx-auto py-8 space-y-6">
         <Skeleton className="h-10 w-48" />

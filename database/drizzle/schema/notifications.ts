@@ -8,7 +8,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { user } from "./users";
-import { documents } from "./documents";
 import { games } from "./games";
 import { teams } from "./teams";
 
@@ -40,7 +39,6 @@ export const activityLog = pgTable("activity_log", {
     .references(() => user.id),
   action: text("action").notNull(),
   details: jsonb("details"),
-  documentId: uuid("document_id").references(() => documents.id),
   gameId: uuid("game_id").references(() => games.id),
   teamId: uuid("team_id").references(() => teams.id),
   createdAt: timestamp("created_at").defaultNow(),
@@ -50,10 +48,6 @@ export const activityLogRelations = relations(activityLog, ({ one }) => ({
   user: one(user, {
     fields: [activityLog.userId],
     references: [user.id],
-  }),
-  document: one(documents, {
-    fields: [activityLog.documentId],
-    references: [documents.id],
   }),
   game: one(games, {
     fields: [activityLog.gameId],

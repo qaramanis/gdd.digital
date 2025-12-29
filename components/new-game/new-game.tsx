@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,21 +26,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, Loader2, Check } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { createGame } from "@/lib/actions/game-actions";
 import { useUser } from "@/providers/user-context";
 import { toast } from "sonner";
-
-const platforms = [
-  { id: "pc", name: "PC" },
-  { id: "playstation", name: "PlayStation" },
-  { id: "xbox", name: "Xbox" },
-  { id: "nintendo", name: "Nintendo Switch" },
-  { id: "mobile", name: "Mobile" },
-  { id: "vr", name: "VR/AR" },
-];
 
 const timelines = [
   { value: "1-3 months", label: "1-3 months" },
@@ -52,22 +43,20 @@ const timelines = [
 
 export default function NewGamePage() {
   const router = useRouter();
-  const { userId } = useUser();
+  const { userId, loading: userLoading } = useUser();
 
   const [name, setName] = useState("");
   const [concept, setConcept] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [timeline, setTimeline] = useState("");
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handlePlatformToggle = (platformId: string) => {
-    setSelectedPlatforms((prev) =>
-      prev.includes(platformId)
-        ? prev.filter((p) => p !== platformId)
-        : [...prev, platformId],
-    );
-  };
+  // Redirect to sign-in if no user after loading completes
+  useEffect(() => {
+    if (!userLoading && !userId) {
+      router.push("/sign-in");
+    }
+  }, [userLoading, userId, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,7 +80,6 @@ export default function NewGamePage() {
           concept: concept.trim(),
           startDate: startDate ? format(startDate, "yyyy-MM-dd") : undefined,
           timeline: timeline || undefined,
-          platforms: selectedPlatforms,
         },
         userId,
       );
@@ -204,53 +192,6 @@ export default function NewGamePage() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Target Platforms</CardTitle>
-            <CardDescription>
-              Select the platforms you're targeting for this game
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {platforms.map((platform) => {
-                const isChecked = selectedPlatforms.includes(platform.id);
-                return (
-                  <div
-                    key={platform.id}
-                    className={cn(
-                      "flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors",
-                      isChecked
-                        ? "bg-primary/10 border-primary"
-                        : "hover:bg-muted",
-                      isSubmitting && "opacity-50 cursor-not-allowed",
-                    )}
-                    onClick={() =>
-                      !isSubmitting && handlePlatformToggle(platform.id)
-                    }
-                  >
-                    <div
-                      className={cn(
-                        "h-4 w-4 rounded border flex items-center justify-center shrink-0 transition-colors",
-                        isChecked
-                          ? "bg-primary border-primary"
-                          : "border-input",
-                      )}
-                    >
-                      {isChecked && (
-                        <Check className="h-3 w-3 text-primary-foreground" />
-                      )}
-                    </div>
-                    <span className="text-sm font-medium">
-                      {platform.name}
-                    </span>
-                  </div>
-                );
-              })}
             </div>
           </CardContent>
         </Card>

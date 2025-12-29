@@ -1,7 +1,7 @@
 import "server-only";
 
 import { db, schema } from "@/database/drizzle";
-import { eq, and, desc, asc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export interface DocumentData {
   gameId?: string;
@@ -11,15 +11,8 @@ export interface DocumentData {
   isGameDocument?: boolean;
 }
 
-export interface SectionData {
-  documentId: string;
-  title: string;
-  content?: any;
-  orderIndex?: number;
-}
-
 /**
- * Get a document by ID with its sections
+ * Get a document by ID
  */
 export async function getDocument(documentId: string) {
   return db.query.documents.findFirst({
@@ -27,33 +20,6 @@ export async function getDocument(documentId: string) {
     with: {
       game: true,
       user: true,
-      sections: {
-        orderBy: [asc(schema.documentSections.orderIndex)],
-      },
-    },
-  });
-}
-
-/**
- * Get a document by ID (simple, without relations)
- */
-export async function getDocumentBasic(documentId: string) {
-  return db.query.documents.findFirst({
-    where: eq(schema.documents.id, documentId),
-  });
-}
-
-/**
- * Get all documents for a game
- */
-export async function getDocumentsByGame(gameId: string) {
-  return db.query.documents.findMany({
-    where: eq(schema.documents.gameId, gameId),
-    orderBy: [desc(schema.documents.updatedAt)],
-    with: {
-      sections: {
-        orderBy: [asc(schema.documentSections.orderIndex)],
-      },
     },
   });
 }
@@ -103,99 +69,4 @@ export async function deleteDocument(documentId: string) {
     .where(eq(schema.documents.id, documentId))
     .returning();
   return deleted;
-}
-
-// Document Sections
-
-/**
- * Get a document section by ID
- */
-export async function getDocumentSection(sectionId: string) {
-  return db.query.documentSections.findFirst({
-    where: eq(schema.documentSections.id, sectionId),
-    with: {
-      document: true,
-    },
-  });
-}
-
-/**
- * Get all sections for a document
- */
-export async function getDocumentSections(documentId: string) {
-  return db.query.documentSections.findMany({
-    where: eq(schema.documentSections.documentId, documentId),
-    orderBy: [asc(schema.documentSections.orderIndex)],
-  });
-}
-
-/**
- * Create a new document section
- */
-export async function createDocumentSection(data: SectionData) {
-  const [section] = await db
-    .insert(schema.documentSections)
-    .values(data)
-    .returning();
-  return section;
-}
-
-/**
- * Create multiple document sections
- */
-export async function createDocumentSections(sections: SectionData[]) {
-  if (sections.length === 0) return [];
-  const result = await db
-    .insert(schema.documentSections)
-    .values(sections)
-    .returning();
-  return result;
-}
-
-/**
- * Update a document section
- */
-export async function updateDocumentSection(
-  sectionId: string,
-  data: Partial<Pick<SectionData, "content" | "title" | "orderIndex">>
-) {
-  const [updated] = await db
-    .update(schema.documentSections)
-    .set({ ...data, updatedAt: new Date() })
-    .where(eq(schema.documentSections.id, sectionId))
-    .returning();
-  return updated;
-}
-
-/**
- * Delete a document section
- */
-export async function deleteDocumentSection(sectionId: string) {
-  const [deleted] = await db
-    .delete(schema.documentSections)
-    .where(eq(schema.documentSections.id, sectionId))
-    .returning();
-  return deleted;
-}
-
-/**
- * Reorder document sections
- */
-export async function reorderDocumentSections(
-  documentId: string,
-  sectionOrders: { id: string; orderIndex: number }[]
-) {
-  const updates = sectionOrders.map(({ id, orderIndex }) =>
-    db
-      .update(schema.documentSections)
-      .set({ orderIndex, updatedAt: new Date() })
-      .where(
-        and(
-          eq(schema.documentSections.id, id),
-          eq(schema.documentSections.documentId, documentId)
-        )
-      )
-  );
-
-  await Promise.all(updates);
 }

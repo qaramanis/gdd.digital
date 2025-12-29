@@ -44,6 +44,13 @@ export default function GamesPage() {
     recentGames: 0,
   });
 
+  // Redirect to sign-in if no user after loading completes
+  useEffect(() => {
+    if (!userLoading && !userId) {
+      router.push("/sign-in");
+    }
+  }, [userLoading, userId, router]);
+
   useEffect(() => {
     if (!userLoading && userId) {
       fetchGamesAndStats();

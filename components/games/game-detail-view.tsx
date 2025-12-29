@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -11,7 +11,6 @@ import {
   Gamepad2,
   Play,
   CheckCircle,
-  LayoutGrid,
   BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,27 +22,25 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/progress";
 import { formatDate } from "@/lib/date-utils";
 import Image from "next/image";
 import GameScenesList from "./game-scenes-list";
 import { useUser } from "@/providers/user-context";
 import { formatDistanceToNow } from "date-fns";
-import { ShareDocumentDialog } from "../collaboration/share-document-dialog";
 import EditGameModal from "./game-edit-modal";
 import { toast } from "sonner";
-import { updateGameWithImage } from "@/lib/actions/game-actions";
+import { updateGameWithImage, updateGameCompletionStatus } from "@/lib/actions/game-actions";
+import { GDD_SECTIONS } from "@/lib/gdd/sections";
+import { GDDSectionContent } from "@/lib/actions/gdd-actions";
 
 interface GameDetailViewProps {
   game: any;
-  document: any;
-  sections: any[];
+  gddSections: Record<string, GDDSectionContent>;
 }
 
 export default function GameDetailView({
   game: initialGame,
-  document,
-  sections,
+  gddSections,
 }: GameDetailViewProps) {
   const router = useRouter();
   const { userId } = useUser();
@@ -110,21 +107,74 @@ export default function GameDetailView({
     }
   };
 
-  // Calculate document progress
-  const totalSections = sections.length;
-  const completedSections = sections.filter(
-    (s) => s.content && s.content.length > 50,
-  ).length;
-  const documentProgress =
-    totalSections > 0 ? (completedSections / totalSections) * 100 : 0;
+  // Calculate GDD progress from subsections
+  // Total subsections across all GDD sections
+  const totalSubsections = GDD_SECTIONS.reduce(
+    (sum, section) => sum + section.subSections.length,
+    0
+  );
 
-  // Calculate days since start
-  const daysSinceStart = game.start_date
-    ? Math.floor(
-        (new Date().getTime() - new Date(game.start_date).getTime()) /
-          (1000 * 60 * 60 * 24),
-      )
+  // Count completed subsections (subsections with non-empty content)
+  const completedSubsections = GDD_SECTIONS.reduce((count, section) => {
+    const sectionContent = gddSections[section.slug];
+    if (!sectionContent) return count;
+
+    const filledSubsections = section.subSections.filter((sub) => {
+      const content = sectionContent[sub.id];
+      return content && content.trim().length > 0;
+    }).length;
+
+    return count + filledSubsections;
+  }, 0);
+
+  const gddProgress = totalSubsections > 0
+    ? (completedSubsections / totalSubsections) * 100
     : 0;
+
+  // Determine status based on progress
+  const isCompleted = gddProgress === 100;
+  const status = isCompleted ? "Completed" : "Active";
+
+  // Calculate days in development
+  const calculateDaysInDevelopment = () => {
+    if (!game.created_at) return 0;
+
+    const startDate = new Date(game.created_at);
+    const endDate = game.completed_at ? new Date(game.completed_at) : new Date();
+
+    return Math.floor(
+      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+  };
+
+  const daysInDevelopment = calculateDaysInDevelopment();
+
+  // Track previous completion state to detect changes
+  const prevIsCompletedRef = useRef<boolean | null>(null);
+
+  // Auto-update completion status when progress changes
+  useEffect(() => {
+    // Skip on initial render
+    if (prevIsCompletedRef.current === null) {
+      prevIsCompletedRef.current = !!game.completed_at;
+      return;
+    }
+
+    const wasCompleted = prevIsCompletedRef.current;
+
+    // Only update if completion state changed
+    if (isCompleted !== wasCompleted && userId) {
+      updateGameCompletionStatus(game.id, userId, isCompleted).then((result) => {
+        if (result.success) {
+          setGame((prev: typeof game) => ({
+            ...prev,
+            completed_at: result.completedAt,
+          }));
+        }
+      });
+      prevIsCompletedRef.current = isCompleted;
+    }
+  }, [isCompleted, game.id, userId]);
 
   return (
     <div className="space-y-6 p-4">
@@ -171,16 +221,9 @@ export default function GameDetailView({
             </div>
             <div className="flex-1 min-w-0">
               <h1 className="text-2xl font-bold mb-2">{game.name}</h1>
-              <p className="text-accent mb-4 line-clamp-2">
+              <p className="text-accent line-clamp-2">
                 {game.concept || "No concept description provided"}
               </p>
-              <div className="flex flex-wrap gap-2">
-                {game.platforms?.map((platform: string) => (
-                  <Badge key={platform} variant="secondary">
-                    {platform.toUpperCase()}
-                  </Badge>
-                ))}
-              </div>
             </div>
           </div>
         </CardContent>
@@ -191,27 +234,25 @@ export default function GameDetailView({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Status</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
+            <CheckCircle className={`h-4 w-4 ${isCompleted ? "text-green-500" : "text-yellow-500"}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Active</div>
+            <div className="text-2xl font-bold">{status}</div>
             <p className="text-xs text-accent">
-              {daysSinceStart} days in development
+              {daysInDevelopment} days in development
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Document</CardTitle>
+            <CardTitle className="text-sm font-medium">GDD Progress</CardTitle>
             <FileText className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {Math.round(documentProgress)}%
-            </div>
+            <div className="text-2xl font-bold">{Math.round(gddProgress)}%</div>
             <p className="text-xs text-accent">
-              {completedSections}/{totalSections} sections complete
+              {completedSubsections}/{totalSubsections} subsections completed
             </p>
           </CardContent>
         </Card>
@@ -247,121 +288,53 @@ export default function GameDetailView({
 
       {/* Main Content Grid */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Document Summary */}
+        {/* GDD Summary */}
         <div className="lg:col-span-2">
-          <Card className="h-full">
+          <Card className="h-full flex flex-col">
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
                   <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
+                    <BookOpen className="h-5 w-5" />
                     Game Design Document
                   </CardTitle>
                   <CardDescription>
-                    {document
-                      ? `Created ${formatDistanceToNow(new Date(document.created_at), { addSuffix: true })}`
-                      : "No document created yet"}
+                    {completedSubsections > 0
+                      ? `${completedSubsections} of ${totalSubsections} subsections completed`
+                      : "Start documenting your game"}
                   </CardDescription>
                 </div>
-                {document && (
-                  <div className="flex gap-2">
-                    <ShareDocumentDialog
-                      documentId={document.id}
-                      documentTitle={document.title}
-                      userId={userId as string}
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push(`/editor/${document.id}`)}
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </Button>
-                  </div>
-                )}
               </div>
             </CardHeader>
-            <CardContent>
-              {document ? (
-                <div className="space-y-6">
-                  {/* Progress Summary */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-muted/50 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        <span className="text-sm font-medium">Completion</span>
-                      </div>
-                      <div className="text-3xl font-bold mb-2">
-                        {Math.round(documentProgress)}%
-                      </div>
-                      <Progress value={documentProgress} className="h-2" />
-                      <p className="text-xs text-accent mt-2">
-                        {completedSections} of {totalSections} sections
-                        completed
-                      </p>
-                    </div>
-                    <div className="p-4 bg-muted/50 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <LayoutGrid className="h-4 w-4 text-blue-500" />
-                        <span className="text-sm font-medium">Sections</span>
-                      </div>
-                      <div className="text-3xl font-bold mb-2">
-                        {totalSections}
-                      </div>
-                      <div className="flex gap-2 text-xs">
-                        <Badge variant="secondary" className="text-xs">
-                          {completedSections} complete
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {totalSections - completedSections} in progress
-                        </Badge>
-                      </div>
-                    </div>
+            <CardContent className="flex-1 flex flex-col">
+              <div className="flex-1 flex flex-col gap-4">
+                <div className="flex-1 p-4 bg-muted/50 rounded-lg flex flex-col justify-center">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span className="text-sm font-medium">Progress</span>
                   </div>
-
-                  {/* Recent Sections */}
-                  <div>
-                    <h4 className="text-sm font-medium mb-3">
-                      Document Sections
-                    </h4>
-                    <div className="space-y-2">
-                      {sections.slice(0, 5).map((section) => (
-                        <div
-                          key={section.id}
-                          className="flex items-center justify-between p-3 rounded-md hover:bg-muted cursor-pointer transition-colors"
-                          onClick={() => router.push(`/editor/${document.id}`)}
-                        >
-                          <span className="text-sm truncate flex-1">
-                            {section.title}
-                          </span>
-                          {section.content && section.content.length > 50 ? (
-                            <Badge variant="secondary" className="text-xs ml-2">
-                              Complete
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-xs ml-2">
-                              In Progress
-                            </Badge>
-                          )}
-                        </div>
-                      ))}
-                      {sections.length > 5 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="w-full mt-2"
-                          onClick={() => router.push(`/editor/${document.id}`)}
-                        >
-                          View all {sections.length} sections
-                        </Button>
-                      )}
-                    </div>
+                  <div className="text-3xl font-bold mb-2">
+                    {Math.round(gddProgress)}%
                   </div>
+                  <div className="w-full bg-muted rounded-full h-2 mb-2">
+                    <div
+                      className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min(gddProgress, 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-accent">
+                    {completedSubsections} of {totalSubsections} subsections completed
+                  </p>
                 </div>
-              ) : (
-                <DocumentEmptyState />
-              )}
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => router.push(`/games/${game.id}/document`)}
+                >
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  Open Game Design Document
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -378,22 +351,11 @@ export default function GameDetailView({
                 variant="default"
                 size="sm"
                 className="w-full justify-start"
-                onClick={() => router.push(`/games/${game.id}/gdd`)}
+                onClick={() => router.push(`/games/${game.id}/document`)}
               >
                 <BookOpen className="h-4 w-4 mr-2" />
                 Edit GDD
               </Button>
-              {document && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start"
-                  onClick={() => router.push(`/editor/${document.id}`)}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Edit Document
-                </Button>
-              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -428,8 +390,11 @@ export default function GameDetailView({
               )}
               <div className="flex justify-between">
                 <span className="text-accent">Status</span>
-                <Badge variant="secondary" className="text-background">
-                  Active
+                <Badge
+                  variant="secondary"
+                  className={isCompleted ? "bg-green-500 text-white" : "text-background"}
+                >
+                  {status}
                 </Badge>
               </div>
             </CardContent>
@@ -459,21 +424,6 @@ export default function GameDetailView({
         onSave={handleSaveGame}
         userId={userId as string}
       />
-    </div>
-  );
-}
-
-function DocumentEmptyState() {
-  return (
-    <div className="flex flex-col items-center justify-center py-12 px-4 bg-transparent rounded-lg">
-      <div className="w-16 h-16 bg-transparent rounded-full flex items-center justify-center mb-4">
-        <FileText className="h-8 w-8 text-accent" />
-      </div>
-      <p className="text-lg font-medium mb-2">No Document Found</p>
-      <p className="text-sm text-accent text-center max-w-sm">
-        There is no document available for this game.
-        <br /> If you think this is a mistake, try refreshing the page.
-      </p>
     </div>
   );
 }

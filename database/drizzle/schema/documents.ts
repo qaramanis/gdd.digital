@@ -25,7 +25,7 @@ export const documents = pgTable("documents", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const documentsRelations = relations(documents, ({ one, many }) => ({
+export const documentsRelations = relations(documents, ({ one }) => ({
   game: one(games, {
     fields: [documents.gameId],
     references: [games.id],
@@ -38,41 +38,13 @@ export const documentsRelations = relations(documents, ({ one, many }) => ({
     fields: [documents.teamId],
     references: [teams.id],
   }),
-  sections: many(documentSections),
 }));
-
-export const documentSections = pgTable("document_sections", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  documentId: uuid("document_id")
-    .notNull()
-    .references(() => documents.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  content: jsonb("content"),
-  orderIndex: integer("order_index").default(0),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const documentSectionsRelations = relations(
-  documentSections,
-  ({ one, many }) => ({
-    document: one(documents, {
-      fields: [documentSections.documentId],
-      references: [documents.id],
-    }),
-    comments: many(comments),
-    scenes: many(gameScenes),
-  })
-);
 
 export const gameScenes = pgTable("game_scenes", {
   id: uuid("id").primaryKey().defaultRandom(),
   gameId: uuid("game_id")
     .notNull()
     .references(() => games.id, { onDelete: "cascade" }),
-  documentSectionId: uuid("document_section_id").references(
-    () => documentSections.id
-  ),
   createdBy: text("created_by")
     .notNull()
     .references(() => user.id),
@@ -99,10 +71,6 @@ export const gameScenesRelations = relations(gameScenes, ({ one, many }) => ({
   game: one(games, {
     fields: [gameScenes.gameId],
     references: [games.id],
-  }),
-  section: one(documentSections, {
-    fields: [gameScenes.documentSectionId],
-    references: [documentSections.id],
   }),
   creator: one(user, {
     fields: [gameScenes.createdBy],
@@ -144,36 +112,4 @@ export const notesRelations = relations(notes, ({ one }) => ({
     fields: [notes.userId],
     references: [user.id],
   }),
-}));
-
-export const comments = pgTable("comments", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  documentSectionId: uuid("document_section_id")
-    .notNull()
-    .references(() => documentSections.id, { onDelete: "cascade" }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id),
-  content: text("content").notNull(),
-  parentCommentId: uuid("parent_comment_id"),
-  position: jsonb("position"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const commentsRelations = relations(comments, ({ one, many }) => ({
-  section: one(documentSections, {
-    fields: [comments.documentSectionId],
-    references: [documentSections.id],
-  }),
-  user: one(user, {
-    fields: [comments.userId],
-    references: [user.id],
-  }),
-  parent: one(comments, {
-    fields: [comments.parentCommentId],
-    references: [comments.id],
-    relationName: "commentReplies",
-  }),
-  replies: many(comments, { relationName: "commentReplies" }),
 }));

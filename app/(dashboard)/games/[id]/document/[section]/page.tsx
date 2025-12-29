@@ -19,7 +19,9 @@ import {
 import {
   saveGDDSection,
   getAllGDDSections,
+  getGDDSectionComments,
   GDDSectionContent,
+  type GDDComment,
 } from "@/lib/actions/gdd-actions";
 import type { AllSectionsContent } from "@/lib/ai/prompts";
 import { getUserPreferences } from "@/lib/actions/preferences-actions";
@@ -34,7 +36,6 @@ import type { AIModelId } from "@/database/drizzle/schema/preferences";
 interface GameContext {
   name: string;
   concept: string;
-  platforms: string[];
   timeline?: string;
 }
 
@@ -58,6 +59,7 @@ export default function GDDSectionPage() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [selectedModel, setSelectedModel] =
     useState<AIModelId>("claude-sonnet");
+  const [comments, setComments] = useState<Record<string, GDDComment[]>>({});
 
   const contentRef = useRef<GDDSectionContent>({});
   const allSectionsRef = useRef<AllSectionsContent>({});
@@ -71,17 +73,18 @@ export default function GDDSectionPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [gameResult, allSectionsResult, prefsResult] = await Promise.all([
-        fetchGamePageData(gameId, userId!),
-        getAllGDDSections(gameId),
-        getUserPreferences(userId!),
-      ]);
+      const [gameResult, allSectionsResult, prefsResult, commentsResult] =
+        await Promise.all([
+          fetchGamePageData(gameId, userId!),
+          getAllGDDSections(gameId),
+          getUserPreferences(userId!),
+          getGDDSectionComments(gameId, sectionSlug),
+        ]);
 
       if (gameResult.game) {
         setGameContext({
           name: gameResult.game.name,
           concept: gameResult.game.concept || "",
-          platforms: gameResult.game.platforms || [],
           timeline: gameResult.game.timeline,
         });
       }
@@ -100,6 +103,10 @@ export default function GDDSectionPage() {
 
       if (prefsResult.success && prefsResult.preferences) {
         setSelectedModel(prefsResult.preferences.preferredAiModel);
+      }
+
+      if (commentsResult.success && commentsResult.comments) {
+        setComments(commentsResult.comments);
       }
     } catch (error) {
       console.error("Error loading section data:", error);
@@ -203,11 +210,18 @@ export default function GDDSectionPage() {
     [section],
   );
 
+  // Redirect to sign-in if no user after loading completes
+  useEffect(() => {
+    if (!userLoading && !userId) {
+      router.push("/sign-in");
+    }
+  }, [userLoading, userId, router]);
+
   if (!section) {
     notFound();
   }
 
-  if (loading || userLoading || !gameContext) {
+  if (loading || userLoading || !userId || !gameContext) {
     return <SectionSkeleton />;
   }
 
@@ -219,13 +233,13 @@ export default function GDDSectionPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push(`/games/${gameId}/gdd`)}
+            onClick={() => router.push(`/games/${gameId}/document`)}
             className="gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
             All Sections
           </Button>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-accent">
             Section {section.number} of {GDD_SECTIONS.length}
           </div>
         </div>
@@ -268,21 +282,21 @@ export default function GDDSectionPage() {
       {/* Main Content Card */}
       <Card>
         <CardHeader>
-          <div className="flex items-start justify-between">
+          <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-2xl">
                 {String(section.number).padStart(2, "0")}. {section.title}
               </CardTitle>
-              <CardDescription className="mt-2 max-w-2xl">
-                {section.description}
-              </CardDescription>
             </div>
             {lastSaved && (
-              <div className="text-xs text-muted-foreground">
+              <div className="text-xs text-accent">
                 Last saved: {lastSaved.toLocaleTimeString()}
               </div>
             )}
           </div>
+          <CardDescription className="mt-2 max-w-2xl">
+            {section.description}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
           {section.subSections.map((subSection) => (
@@ -298,6 +312,15 @@ export default function GDDSectionPage() {
               onChange={(value) => handleSubSectionChange(subSection.id, value)}
               onAcceptGenerated={handleSave}
               modelId={selectedModel}
+              gameId={gameId}
+              userId={userId}
+              initialComments={comments[subSection.id] || []}
+              onCommentsChange={(newComments) => {
+                setComments((prev) => ({
+                  ...prev,
+                  [subSection.id]: newComments,
+                }));
+              }}
             />
           ))}
         </CardContent>
@@ -309,7 +332,7 @@ export default function GDDSectionPage() {
           <Button
             variant="outline"
             onClick={() =>
-              router.push(`/games/${gameId}/gdd/${navigation.prev!.slug}`)
+              router.push(`/games/${gameId}/document/${navigation.prev!.slug}`)
             }
             className="gap-2"
           >
@@ -324,7 +347,7 @@ export default function GDDSectionPage() {
           <Button
             variant="outline"
             onClick={() =>
-              router.push(`/games/${gameId}/gdd/${navigation.next!.slug}`)
+              router.push(`/games/${gameId}/document/${navigation.next!.slug}`)
             }
             className="gap-2"
           >

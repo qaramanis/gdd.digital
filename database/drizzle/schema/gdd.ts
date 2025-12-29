@@ -32,13 +32,41 @@ export const gddSections = pgTable(
   })
 );
 
-export const gddSectionsRelations = relations(gddSections, ({ one }) => ({
+export const gddSectionsRelations = relations(gddSections, ({ one, many }) => ({
   game: one(games, {
     fields: [gddSections.gameId],
     references: [games.id],
   }),
   lastEditor: one(user, {
     fields: [gddSections.lastEditedBy],
+    references: [user.id],
+  }),
+  comments: many(gddComments),
+}));
+
+// Stores comments for each subsection
+export const gddComments = pgTable("gdd_comments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  gameId: uuid("game_id")
+    .notNull()
+    .references(() => games.id, { onDelete: "cascade" }),
+  sectionSlug: text("section_slug").notNull(), // e.g., "overview", "game-concept"
+  subSectionSlug: text("sub_section_slug").notNull(), // e.g., "brief_introduction"
+  content: text("content").notNull(),
+  authorId: text("author_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const gddCommentsRelations = relations(gddComments, ({ one }) => ({
+  game: one(games, {
+    fields: [gddComments.gameId],
+    references: [games.id],
+  }),
+  author: one(user, {
+    fields: [gddComments.authorId],
     references: [user.id],
   }),
 }));
