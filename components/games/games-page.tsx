@@ -140,7 +140,10 @@ export default function GamesPage() {
     id: game.id,
     name: game.name,
     concept: game.concept || "",
-    updated_at: typeof game.updatedAt === "string" ? game.updatedAt : (game.updatedAt?.toISOString() || new Date().toISOString()),
+    updated_at:
+      typeof game.updatedAt === "string"
+        ? game.updatedAt
+        : game.updatedAt?.toISOString() || new Date().toISOString(),
     image_url: game.imageUrl || null,
     documents: game.documents,
   }));
@@ -186,7 +189,7 @@ export default function GamesPage() {
               viewMode={viewMode}
               getTimeAgo={getTimeAgo}
               onView={(gameId) => router.push(`/games/${gameId}`)}
-              onEdit={(gameId) => router.push(`/games/${gameId}/edit`)}
+              onEdit={(gameId) => router.push(`/games/${gameId}/document`)}
             />
 
             {!showAll && totalPages > 1 && (

@@ -15,7 +15,9 @@ export default function SignInForm() {
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
 
-  const handleSocialSignIn = async (provider: "google" | "github" | "gitlab") => {
+  const handleSocialSignIn = async (
+    provider: "google" | "github" | "gitlab",
+  ) => {
     setSocialLoading(provider);
     try {
       await signIn.social({
@@ -32,7 +34,7 @@ export default function SignInForm() {
   return (
     <div className="relative flex items-center justify-center h-screen w-screen">
       <div className="h-150 w-250 rounded-xl flex items-center justify-center">
-        <div className="w-110 h-full text-background bg-foreground/90 flex flex-col p-12 justify-between rounded-xl">
+        <div className="w-110 h-full text-background bg-foreground/95 flex flex-col p-12 justify-between rounded-xl">
           <Link href="/">Logo</Link>
           <div>
             <div className="text-2xl font-bold">Log In</div>

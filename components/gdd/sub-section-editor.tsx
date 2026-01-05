@@ -172,7 +172,7 @@ export function SubSectionEditor({
         } else {
           const modelName = modelId ? AI_MODELS[modelId]?.name : "the AI model";
           toast.error(
-            `An error occurred with ${modelName}, try a different model`,
+            `An error occurred with ${modelName}, please try a different model`,
           );
         }
         return;
@@ -194,7 +194,7 @@ export function SubSectionEditor({
         if (fullContent.includes("__GENERATION_ERROR__")) {
           const modelName = modelId ? AI_MODELS[modelId]?.name : "the AI model";
           toast.error(
-            `An error occurred with ${modelName}, try a different model`,
+            `An error occurred with ${modelName}, please try a different model`,
           );
           setGeneratedContent("");
           return;
@@ -207,7 +207,7 @@ export function SubSectionEditor({
         console.error("Generation error:", error);
         const modelName = modelId ? AI_MODELS[modelId]?.name : "the AI model";
         toast.error(
-          `An error occurred with ${modelName}, try a different model`,
+          `An error occurred with ${modelName}, please try a different model`,
         );
       }
     } finally {

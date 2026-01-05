@@ -6,10 +6,21 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sparkles, Wand2, Expand, Minimize2, Loader2, ChevronDown, Workflow } from "lucide-react";
+import {
+  Sparkles,
+  Wand2,
+  Expand,
+  Minimize2,
+  Loader2,
+  ChevronDown,
+  Workflow,
+  Download,
+} from "lucide-react";
 import type { AIModelId } from "@/database/drizzle/schema/preferences";
+import { ExportSectionModal } from "@/components/gdd/export-section-modal";
 
 interface GameContext {
   name: string;
@@ -17,38 +28,57 @@ interface GameContext {
   timeline?: string;
 }
 
+interface SubSectionData {
+  title: string;
+  content: string;
+}
+
+interface SectionData {
+  title: string;
+  sectionType: string;
+  subSections: SubSectionData[];
+}
+
 interface EnhanceButtonsProps {
   sectionType: string;
+  sectionTitle: string;
   gameContext: GameContext;
   getAllContent: () => string;
   setAllContent: (content: string) => void;
   modelId?: AIModelId;
+  currentSectionSubSections: SubSectionData[];
+  availableSections?: SectionData[];
 }
 
 type EnhanceAction = "enhance" | "improve" | "expand" | "concise";
 
-const ACTIONS: { key: EnhanceAction; label: string; icon: React.ReactNode; description: string }[] = [
+const AI_ACTIONS: {
+  key: EnhanceAction;
+  label: string;
+  icon: React.ReactNode;
+  description: string;
+}[] = [
   {
     key: "enhance",
-    label: "Enhance",
+    label: "AI Enhance",
     icon: <Sparkles className="h-4 w-4" />,
     description: "Make more professional and engaging",
   },
   {
     key: "improve",
-    label: "Improve",
+    label: "AI Improve",
     icon: <Wand2 className="h-4 w-4" />,
     description: "Refine clarity and impact",
   },
   {
     key: "expand",
-    label: "Expand",
+    label: "AI Expand",
     icon: <Expand className="h-4 w-4" />,
     description: "Add more detail and depth",
   },
   {
     key: "concise",
-    label: "Make Concise",
+    label: "AI Make Concise",
     icon: <Minimize2 className="h-4 w-4" />,
     description: "Shorten and tighten the text",
   },
@@ -56,13 +86,17 @@ const ACTIONS: { key: EnhanceAction; label: string; icon: React.ReactNode; descr
 
 export function EnhanceButtons({
   sectionType,
+  sectionTitle,
   gameContext,
   getAllContent,
   setAllContent,
   modelId,
+  currentSectionSubSections,
+  availableSections = [],
 }: EnhanceButtonsProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [activeAction, setActiveAction] = useState<EnhanceAction | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const handleEnhance = async (action: EnhanceAction) => {
     const content = getAllContent();
@@ -109,41 +143,78 @@ export function EnhanceButtons({
     }
   };
 
+  const handleExport = () => {
+    setIsExportModalOpen(true);
+  };
+
   return (
-    <div className="flex items-center gap-2">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" disabled={isLoading} className="gap-2">
-            {isLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {activeAction && ACTIONS.find((a) => a.key === activeAction)?.label}...
-              </>
-            ) : (
-              <>
-                <Workflow className="h-4 w-4" />
-                Actions
-                <ChevronDown className="h-3 w-3" />
-              </>
-            )}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-64">
-          {ACTIONS.map((action) => (
+    <>
+      <div className="flex items-center gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isLoading}
+              className="gap-2"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {activeAction &&
+                    AI_ACTIONS.find((a) => a.key === activeAction)?.label}
+                  ...
+                </>
+              ) : (
+                <>
+                  <Workflow className="h-4 w-4" />
+                  Actions
+                  <ChevronDown className="h-3 w-3" />
+                </>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+            {AI_ACTIONS.map((action) => (
+              <DropdownMenuItem
+                key={action.key}
+                onClick={() => handleEnhance(action.key)}
+                className="flex items-start gap-2 py-2"
+              >
+                <span className="mt-0.5">{action.icon}</span>
+                <div>
+                  <div className="font-medium">{action.label}</div>
+                  <div className="text-xs text-accent">{action.description}</div>
+                </div>
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
             <DropdownMenuItem
-              key={action.key}
-              onClick={() => handleEnhance(action.key)}
+              onClick={handleExport}
               className="flex items-start gap-2 py-2"
             >
-              <span className="mt-0.5">{action.icon}</span>
+              <span className="mt-0.5">
+                <Download className="h-4 w-4" />
+              </span>
               <div>
-                <div className="font-medium">{action.label}</div>
-                <div className="text-xs text-accent">{action.description}</div>
+                <div className="font-medium">Export</div>
+                <div className="text-xs text-accent">Export section(s) to file</div>
               </div>
             </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <ExportSectionModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        currentSection={{
+          title: sectionTitle,
+          sectionType,
+          subSections: currentSectionSubSections,
+        }}
+        availableSections={availableSections}
+      />
+    </>
   );
 }

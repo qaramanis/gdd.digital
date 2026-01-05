@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useParams, useRouter, notFound } from "next/navigation";
 import {
   Card,
@@ -220,6 +220,32 @@ export default function GDDSectionPage() {
     [section],
   );
 
+  // Build current section subsections for export
+  const currentSectionSubSections = useMemo(() => {
+    if (!section) return [];
+    return section.subSections.map((sub) => ({
+      title: sub.title,
+      content: contentRef.current[sub.id] || "",
+    }));
+  }, [section, content]);
+
+  // Build available sections for export (excluding current section)
+  const availableSectionsForExport = useMemo(() => {
+    return GDD_SECTIONS
+      .filter((s) => s.slug !== sectionSlug)
+      .map((s) => {
+        const sectionContent = allSectionsRef.current[s.slug] || {};
+        return {
+          title: s.title,
+          sectionType: s.slug,
+          subSections: s.subSections.map((sub) => ({
+            title: sub.title,
+            content: sectionContent[sub.id] || "",
+          })),
+        };
+      });
+  }, [sectionSlug, allSectionsContent]);
+
   // Redirect to sign-in if no user after loading completes
   useEffect(() => {
     if (!userLoading && !userId) {
@@ -259,10 +285,13 @@ export default function GDDSectionPage() {
               <ModelSelector userId={userId!} onModelChange={setSelectedModel} />
               <EnhanceButtons
                 sectionType={sectionSlug}
+                sectionTitle={section.title}
                 gameContext={gameContext}
                 getAllContent={getAllContent}
                 setAllContent={setAllContent}
                 modelId={selectedModel}
+                currentSectionSubSections={currentSectionSubSections}
+                availableSections={availableSectionsForExport}
               />
               <Button
                 variant="default"
