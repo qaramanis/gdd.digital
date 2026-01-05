@@ -5,7 +5,7 @@ import { useParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { GDD_SECTIONS } from "@/lib/gdd/sections";
-import { ChevronRight, FileText } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 interface GDDLayoutProps {
   children: ReactNode;
@@ -23,7 +23,7 @@ export default function GDDLayout({ children }: GDDLayoutProps) {
   return (
     <div className="flex min-h-[calc(100vh-4rem)]">
       {/* Sidebar Navigation */}
-      <aside className="w-64 border-r p-4 hidden lg:block">
+      <aside className="w-64 border-r p-6 hidden lg:block">
         <div className="space-y-1 sticky top-4">
           <div className="flex items-center gap-2 px-2">
             {/*<FileText className="h-5 w-5" />*/}
@@ -62,7 +62,10 @@ export default function GDDLayout({ children }: GDDLayoutProps) {
             Game
           </Link>
           <ChevronRight className="h-4 w-4" />
-          <Link href={`/games/${gameId}/document`} className="hover:text-foreground">
+          <Link
+            href={`/games/${gameId}/document`}
+            className="hover:text-foreground"
+          >
             Document
           </Link>
           {currentSection && (
