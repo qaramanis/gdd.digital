@@ -7,7 +7,7 @@ import {
   deleteFile,
   BUCKETS,
   getBucketForFile,
-} from "@/lib/storage/minio-client";
+} from "@/lib/storage/storage-client";
 
 export interface SceneMetadata {
   name: string;
@@ -52,7 +52,7 @@ export async function uploadScene(
       description: metadata.description,
       engine: metadata.engine,
       engineVersion: metadata.engineVersion,
-      storageType: "minio",
+      storageType: "supabase",
       bucketPath: path,
       sceneUrl: publicUrl,
       fileSize: file.size,
@@ -142,7 +142,7 @@ export async function deleteScene(sceneId: string): Promise<void> {
   if (!scene) return;
 
   // Delete file from storage if it exists
-  if (scene.bucketPath && scene.storageType === "minio") {
+  if (scene.bucketPath && (scene.storageType === "supabase" || scene.storageType === "minio")) {
     const sceneData = scene.sceneData as { bucket?: string } | null;
     const bucket = sceneData?.bucket || getBucketForFile(scene.bucketPath);
 
@@ -167,7 +167,7 @@ export async function deleteGameScenes(gameId: string): Promise<void> {
 
   // Delete files from storage
   for (const scene of scenes) {
-    if (scene.bucketPath && scene.storageType === "minio") {
+    if (scene.bucketPath && (scene.storageType === "supabase" || scene.storageType === "minio")) {
       const sceneData = scene.sceneData as { bucket?: string } | null;
       const bucket = sceneData?.bucket || getBucketForFile(scene.bucketPath);
 
