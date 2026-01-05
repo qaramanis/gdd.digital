@@ -12,7 +12,6 @@ import {
   Sparkles,
   RotateCcw,
   MessageSquare,
-  MessageSquareText,
   MessageSquareOff,
   Trash2,
   Pencil,
@@ -71,6 +70,9 @@ interface SubSectionEditorProps {
   userId: string;
   initialComments: GDDComment[];
   onCommentsChange: (comments: GDDComment[]) => void;
+  // Permission props
+  canEdit?: boolean;
+  canComment?: boolean;
 }
 
 export function SubSectionEditor({
@@ -88,6 +90,8 @@ export function SubSectionEditor({
   userId,
   initialComments,
   onCommentsChange,
+  canEdit = true,
+  canComment = true,
 }: SubSectionEditorProps) {
   const [generatedContent, setGeneratedContent] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -111,21 +115,33 @@ export function SubSectionEditor({
         codeBlock: false,
       }),
       Placeholder.configure({
-        placeholder,
+        placeholder: canEdit
+          ? placeholder
+          : "You do not have permission to edit this content",
       }),
     ],
     content: initialContent,
+    editable: canEdit,
     immediatelyRender: false, // Prevent SSR hydration mismatch
     editorProps: {
       attributes: {
-        class:
+        class: cn(
           "prose prose-sm max-w-none focus:outline-none min-h-[100px] px-3 py-2",
+          !canEdit && "cursor-not-allowed opacity-70",
+        ),
       },
     },
     onUpdate: ({ editor }) => {
       onChange?.(editor.getHTML());
     },
   });
+
+  // Handle click on read-only editor to show permission toast
+  const handleEditorClick = useCallback(() => {
+    if (!canEdit) {
+      toast.error("You do not have permission to edit this content");
+    }
+  }, [canEdit]);
 
   const generateContent = useCallback(async () => {
     if (!editor) return;
@@ -398,36 +414,29 @@ export function SubSectionEditor({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium">{title}</label>
+        <label className="text-md font-medium">{title}</label>
         <div className="flex items-center">
-          {/*<Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs gap-1"
-            onClick={startCommentEditing}
-          >
-            <MessageSquareText className="h-3 w-3" />
-            Comments
-          </Button>*/}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={generateContent}
-            disabled={isGenerating}
-            className="h-7 text-xs gap-1"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-3 w-3" />
-                AI Generate
-              </>
-            )}
-          </Button>
+          {canEdit && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={generateContent}
+              disabled={isGenerating}
+              className="h-7 text-xs gap-1"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-3 w-3" />
+                  AI Generate
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -445,13 +454,17 @@ export function SubSectionEditor({
               <span>No comments available</span>
             </div>
           )}
-          |
-          <div
-            onClick={startCommentEditing}
-            className="cursor-pointer hover:text-foreground transition-all duration-300"
-          >
-            New Comment
-          </div>
+          {canComment && (
+            <>
+              |
+              <div
+                onClick={startCommentEditing}
+                className="cursor-pointer hover:text-foreground transition-all duration-300"
+              >
+                New Comment
+              </div>
+            </>
+          )}
         </div>
 
         {/* Comment form (new/edit/view) */}
@@ -518,9 +531,9 @@ export function SubSectionEditor({
                     className="h-5 w-5 p-0"
                     title="View comment"
                   >
-                    <Eye className="h-3 w-3 text-accent" />
+                    <Eye className="h-3 w-3 text-secondary" />
                   </Button>
-                  {comment.authorId === userId && (
+                  {canComment && comment.authorId === userId && (
                     <>
                       <Button
                         variant="ghost"
@@ -529,20 +542,20 @@ export function SubSectionEditor({
                         className="h-5 w-5 p-2"
                         title="Edit comment"
                       >
-                        <Pencil className="h-3 w-3 text-accent" />
+                        <Pencil className="h-3 w-3 text-orange-400" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDeleteComment(comment.id)}
                         disabled={deletingCommentId === comment.id}
-                        className="h-5 w-5 p-2J"
+                        className="h-5 w-5 p-2"
                         title="Delete comment"
                       >
                         {deletingCommentId === comment.id ? (
                           <Loader2 className="h-3 w-3 animate-spin" />
                         ) : (
-                          <Trash2 className="h-3 w-3 text-accent" />
+                          <Trash2 className="h-3 w-3 text-destructive" />
                         )}
                       </Button>
                     </>
@@ -556,9 +569,11 @@ export function SubSectionEditor({
 
       <div className="relative">
         <div
+          onClick={handleEditorClick}
           className={cn(
             "border rounded-lg bg-background transition-colors",
             editor?.isFocused && "ring-2 ring-ring ring-offset-2",
+            !canEdit && "cursor-not-allowed",
           )}
         >
           <EditorContent editor={editor} />

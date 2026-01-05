@@ -3,6 +3,10 @@
 import { db } from "@/database/drizzle";
 import { gddSections, gddComments, user } from "@/database/drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
+import { hasGameAccess } from "@/lib/data/collaboration";
+
+// Roles that can create, edit, and delete comments
+const COMMENT_ALLOWED_ROLES = ["owner", "admin", "editor", "reviewer"] as const;
 
 export interface GDDSectionContent {
   [subSectionId: string]: string;
@@ -159,6 +163,22 @@ export async function createGDDComment(
   userId: string
 ): Promise<{ success: boolean; comment?: GDDComment; error?: string }> {
   try {
+    // Check if user has permission to comment (not a viewer)
+    const access = await hasGameAccess(gameId, userId);
+    if (!access.hasAccess || !access.role) {
+      return {
+        success: false,
+        error: "You don't have access to this game",
+      };
+    }
+
+    if (!COMMENT_ALLOWED_ROLES.includes(access.role as typeof COMMENT_ALLOWED_ROLES[number])) {
+      return {
+        success: false,
+        error: "Viewers cannot create comments",
+      };
+    }
+
     // Create new comment
     const [created] = await db
       .insert(gddComments)
@@ -284,26 +304,52 @@ export async function updateGDDComment(
   userId: string
 ): Promise<{ success: boolean; comment?: GDDComment; error?: string }> {
   try {
+    // First, get the comment to find the gameId
+    const existingComment = await db
+      .select({ gameId: gddComments.gameId, authorId: gddComments.authorId })
+      .from(gddComments)
+      .where(eq(gddComments.id, commentId))
+      .limit(1);
+
+    if (existingComment.length === 0) {
+      return {
+        success: false,
+        error: "Comment not found",
+      };
+    }
+
+    // Check if user has permission to comment (not a viewer)
+    const access = await hasGameAccess(existingComment[0].gameId, userId);
+    if (!access.hasAccess || !access.role) {
+      return {
+        success: false,
+        error: "You don't have access to this game",
+      };
+    }
+
+    if (!COMMENT_ALLOWED_ROLES.includes(access.role as typeof COMMENT_ALLOWED_ROLES[number])) {
+      return {
+        success: false,
+        error: "Viewers cannot edit comments",
+      };
+    }
+
+    // Ensure user is the comment author
+    if (existingComment[0].authorId !== userId) {
+      return {
+        success: false,
+        error: "You can only edit your own comments",
+      };
+    }
+
     const [updated] = await db
       .update(gddComments)
       .set({
         content,
         updatedAt: new Date(),
       })
-      .where(
-        and(
-          eq(gddComments.id, commentId),
-          eq(gddComments.authorId, userId)
-        )
-      )
+      .where(eq(gddComments.id, commentId))
       .returning();
-
-    if (!updated) {
-      return {
-        success: false,
-        error: "Comment not found or not authorized",
-      };
-    }
 
     // Get author name
     const authorResult = await db
@@ -334,14 +380,47 @@ export async function deleteGDDComment(
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // First, get the comment to find the gameId
+    const existingComment = await db
+      .select({ gameId: gddComments.gameId, authorId: gddComments.authorId })
+      .from(gddComments)
+      .where(eq(gddComments.id, commentId))
+      .limit(1);
+
+    if (existingComment.length === 0) {
+      return {
+        success: false,
+        error: "Comment not found",
+      };
+    }
+
+    // Check if user has permission to comment (not a viewer)
+    const access = await hasGameAccess(existingComment[0].gameId, userId);
+    if (!access.hasAccess || !access.role) {
+      return {
+        success: false,
+        error: "You don't have access to this game",
+      };
+    }
+
+    if (!COMMENT_ALLOWED_ROLES.includes(access.role as typeof COMMENT_ALLOWED_ROLES[number])) {
+      return {
+        success: false,
+        error: "Viewers cannot delete comments",
+      };
+    }
+
+    // Ensure user is the comment author
+    if (existingComment[0].authorId !== userId) {
+      return {
+        success: false,
+        error: "You can only delete your own comments",
+      };
+    }
+
     await db
       .delete(gddComments)
-      .where(
-        and(
-          eq(gddComments.id, commentId),
-          eq(gddComments.authorId, userId)
-        )
-      );
+      .where(eq(gddComments.id, commentId));
 
     return { success: true };
   } catch (error) {

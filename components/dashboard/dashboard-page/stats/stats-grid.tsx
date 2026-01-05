@@ -3,10 +3,10 @@ import { formatDistanceToNow } from "date-fns";
 import { DashboardData } from "../dashboard-page";
 
 export default function StatsGrid({ data }: { data: DashboardData }) {
-  const { games, teams, stats } = data;
+  const { games, stats } = data;
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       <StatCard
         title="Total Games"
         value={stats.totalGames}
@@ -15,11 +15,6 @@ export default function StatsGrid({ data }: { data: DashboardData }) {
             ? `Latest: ${formatDistanceToNow(new Date(games[0].created_at), { addSuffix: true })}`
             : "No games yet"
         }
-      />
-      <StatCard
-        title="Teams"
-        value={stats.totalTeams}
-        description={`${teams.reduce((acc, team) => acc + (team.member_count || 0), 0)} total members`}
       />
       <StatCard
         title="Notes"

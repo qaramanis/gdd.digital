@@ -2,16 +2,14 @@
 
 import { getUserGames } from "@/lib/data/games";
 import { getUserNotes } from "@/lib/data/notes";
-import { getTeamsByUser, getUserActivityLog } from "@/lib/data/collaboration";
+import { getUserActivityLog, getSharedGames } from "@/lib/data/collaboration";
 
 export interface DashboardData {
   games: any[];
-  teams: any[];
   notes: any[];
   activities: any[];
   stats: {
     totalGames: number;
-    totalTeams: number;
     totalNotes: number;
     recentActivities: number;
   };
@@ -19,11 +17,11 @@ export interface DashboardData {
 
 export async function fetchDashboardData(userId: string): Promise<DashboardData> {
   try {
-    // Fetch games
-    const gamesData = await getUserGames(userId);
+    // Fetch owned games
+    const ownedGamesData = await getUserGames(userId);
 
-    // Fetch teams
-    const teamsData = await getTeamsByUser(userId);
+    // Fetch shared games (games user is a member of)
+    const sharedGamesData = await getSharedGames(userId);
 
     // Fetch notes
     const notesData = await getUserNotes(userId, 5);
@@ -31,22 +29,35 @@ export async function fetchDashboardData(userId: string): Promise<DashboardData>
     // Fetch activity logs
     const activitiesData = await getUserActivityLog(userId, 10);
 
-    // Transform data to match expected interface
-    const transformedGames = gamesData.map((g) => ({
+    // Transform owned games
+    const transformedOwnedGames = ownedGamesData.map((g) => ({
       id: g.id,
       name: g.name,
       concept: g.concept || "",
       image_url: g.imageUrl || undefined,
       created_at: g.createdAt?.toISOString() || "",
       updated_at: g.updatedAt?.toISOString() || "",
+      isOwner: true,
+      role: "owner" as const,
     }));
 
-    const transformedTeams = teamsData.map((t) => ({
-      id: t.id,
-      name: t.name,
-      description: t.description || undefined,
-      created_at: t.createdAt?.toISOString() || "",
+    // Transform shared games
+    const transformedSharedGames = sharedGamesData.map((g) => ({
+      id: g.id,
+      name: g.name,
+      concept: g.concept || "",
+      image_url: g.imageUrl || undefined,
+      created_at: g.createdAt?.toISOString() || "",
+      updated_at: g.updatedAt?.toISOString() || "",
+      isOwner: false,
+      role: g.role,
+      ownerName: g.user?.name || "Unknown",
     }));
+
+    // Combine and sort by updated_at
+    const allGames = [...transformedOwnedGames, ...transformedSharedGames].sort(
+      (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    );
 
     const transformedNotes = notesData.map((n) => ({
       id: n.id,
@@ -60,20 +71,18 @@ export async function fetchDashboardData(userId: string): Promise<DashboardData>
       id: a.id,
       user_id: a.userId,
       action: a.action,
-      entity_type: a.gameId ? "game" : a.teamId ? "team" : "unknown",
-      entity_id: a.gameId || a.teamId || "",
+      entity_type: a.gameId ? "game" : "unknown",
+      entity_id: a.gameId || "",
       created_at: a.createdAt?.toISOString() || "",
       metadata: a.details,
     }));
 
     return {
-      games: transformedGames,
-      teams: transformedTeams,
+      games: allGames,
       notes: transformedNotes,
       activities: transformedActivities,
       stats: {
-        totalGames: transformedGames.length,
-        totalTeams: transformedTeams.length,
+        totalGames: allGames.length,
         totalNotes: transformedNotes.length,
         recentActivities: transformedActivities.length,
       },
@@ -82,12 +91,10 @@ export async function fetchDashboardData(userId: string): Promise<DashboardData>
     console.error("Error fetching dashboard data:", error);
     return {
       games: [],
-      teams: [],
       notes: [],
       activities: [],
       stats: {
         totalGames: 0,
-        totalTeams: 0,
         totalNotes: 0,
         recentActivities: 0,
       },

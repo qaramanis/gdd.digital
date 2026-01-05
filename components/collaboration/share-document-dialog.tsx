@@ -4,7 +4,7 @@ import { useState } from "react";
 import {
   fetchCollaborators,
   sendDocumentInvitation,
-  updateCollaboratorPermission,
+  updateCollaboratorRole,
   removeCollaborator,
 } from "@/lib/actions/collaboration-actions";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,6 @@ import {
   Copy,
   Check,
 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 
 interface ShareDocumentDialogProps {
   documentId: string;
@@ -52,8 +51,7 @@ interface ShareDocumentDialogProps {
 interface Collaborator {
   id: string;
   user_id: string;
-  permission: string;
-  can_share: boolean;
+  role: string;
   added_at: string;
   user?: {
     name: string;
@@ -74,9 +72,8 @@ export function ShareDocumentDialog({
 
   // Invite state
   const [inviteEmail, setInviteEmail] = useState("");
-  const [invitePermission, setInvitePermission] = useState("viewer");
+  const [inviteRole, setInviteRole] = useState("viewer");
   const [inviteMessage, setInviteMessage] = useState("");
-  const [canShare, setCanShare] = useState(false);
 
   // Collaborators state
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
@@ -116,7 +113,7 @@ export function ShareDocumentDialog({
         documentId,
         inviterId: userId,
         inviteeEmail: inviteEmail,
-        permission: invitePermission,
+        role: inviteRole,
         message: inviteMessage || undefined,
       });
 
@@ -127,8 +124,7 @@ export function ShareDocumentDialog({
       toast.success(`Invitation sent to ${inviteEmail}`);
       setInviteEmail("");
       setInviteMessage("");
-      setInvitePermission("viewer");
-      setCanShare(false);
+      setInviteRole("viewer");
     } catch (error: any) {
       console.error("Error sending invitation:", error);
       toast.error(error.message || "Failed to send invitation");
@@ -137,22 +133,22 @@ export function ShareDocumentDialog({
     }
   };
 
-  const handleUpdatePermission = async (
+  const handleUpdateRole = async (
     collaboratorId: string,
-    newPermission: string,
+    newRole: string,
   ) => {
     try {
-      const result = await updateCollaboratorPermission(collaboratorId, newPermission);
+      const result = await updateCollaboratorRole(collaboratorId, newRole);
 
       if (!result.success) {
-        throw new Error(result.error || "Failed to update permission");
+        throw new Error(result.error || "Failed to update role");
       }
 
-      toast.success("Permission updated");
+      toast.success("Role updated");
       await loadCollaborators();
     } catch (error) {
-      console.error("Error updating permission:", error);
-      toast.error("Failed to update permission");
+      console.error("Error updating role:", error);
+      toast.error("Failed to update role");
     }
   };
 
@@ -262,12 +258,12 @@ export function ShareDocumentDialog({
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="permission">Permission level</Label>
+                <Label htmlFor="role">Role</Label>
                 <Select
-                  value={invitePermission}
-                  onValueChange={setInvitePermission}
+                  value={inviteRole}
+                  onValueChange={setInviteRole}
                 >
-                  <SelectTrigger id="permission">
+                  <SelectTrigger id="role">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="w-[--radix-dropdown-menu-trigger-width] min-w-[240px] rounded-lg bg-background/95 backdrop-blur-xl border border-foreground/10">
@@ -282,11 +278,11 @@ export function ShareDocumentDialog({
                         </div>
                       </div>
                     </SelectItem>
-                    <SelectItem value="commenter">
+                    <SelectItem value="reviewer">
                       <div className="flex items-center gap-2">
                         <MessageSquare className="h-4 w-4" />
                         <div>
-                          <div>Commenter</div>
+                          <div>Reviewer</div>
                           <div className="text-xs text-[#666666]">
                             Can view and comment
                           </div>
@@ -307,19 +303,6 @@ export function ShareDocumentDialog({
                   </SelectContent>
                 </Select>
               </div>
-
-              {invitePermission === "editor" && (
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="can-share"
-                    checked={canShare}
-                    onCheckedChange={setCanShare}
-                  />
-                  <Label htmlFor="can-share">
-                    Allow this person to share the document with others
-                  </Label>
-                </div>
-              )}
 
               <div className="flex flex-col gap-2">
                 <Label htmlFor="message">Message (optional)</Label>
@@ -382,9 +365,9 @@ export function ShareDocumentDialog({
                     </div>
                     <div className="flex items-center gap-2">
                       <Select
-                        value={collaborator.permission}
+                        value={collaborator.role}
                         onValueChange={(value) =>
-                          handleUpdatePermission(collaborator.id, value)
+                          handleUpdateRole(collaborator.id, value)
                         }
                       >
                         <SelectTrigger className="w-[130px]">
@@ -392,7 +375,7 @@ export function ShareDocumentDialog({
                         </SelectTrigger>
                         <SelectContent className="w-[--radix-dropdown-menu-trigger-width] min-w-[240px] rounded-lg bg-background/95 backdrop-blur-xl border border-foreground/10">
                           <SelectItem value="viewer">Viewer</SelectItem>
-                          <SelectItem value="commenter">Commenter</SelectItem>
+                          <SelectItem value="reviewer">Reviewer</SelectItem>
                           <SelectItem value="editor">Editor</SelectItem>
                         </SelectContent>
                       </Select>

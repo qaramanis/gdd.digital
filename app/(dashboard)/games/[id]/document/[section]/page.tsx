@@ -39,6 +39,8 @@ interface GameContext {
   timeline?: string;
 }
 
+type UserRole = "owner" | "admin" | "editor" | "reviewer" | "viewer";
+
 export default function GDDSectionPage() {
   const params = useParams();
   const router = useRouter();
@@ -60,9 +62,15 @@ export default function GDDSectionPage() {
   const [selectedModel, setSelectedModel] =
     useState<AIModelId>("claude-sonnet");
   const [comments, setComments] = useState<Record<string, GDDComment[]>>({});
+  const [userRole, setUserRole] = useState<UserRole>("viewer");
 
   const contentRef = useRef<GDDSectionContent>({});
   const allSectionsRef = useRef<AllSectionsContent>({});
+
+  // Check if user can edit content (owner, admin, editor can edit; reviewer, viewer cannot)
+  const canEdit = ["owner", "admin", "editor"].includes(userRole);
+  // Check if user can comment (everyone except viewer can comment)
+  const canComment = ["owner", "admin", "editor", "reviewer"].includes(userRole);
 
   useEffect(() => {
     if (!userLoading && userId && section) {
@@ -87,6 +95,8 @@ export default function GDDSectionPage() {
           concept: gameResult.game.concept || "",
           timeline: gameResult.game.timeline,
         });
+        // Set user role from game data
+        setUserRole((gameResult.game.userRole as UserRole) || "viewer");
       }
 
       if (allSectionsResult.success && allSectionsResult.sections) {
@@ -244,38 +254,42 @@ export default function GDDSectionPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <ModelSelector userId={userId!} onModelChange={setSelectedModel} />
-          <EnhanceButtons
-            sectionType={sectionSlug}
-            gameContext={gameContext}
-            getAllContent={getAllContent}
-            setAllContent={setAllContent}
-            modelId={selectedModel}
-          />
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleSave}
-            disabled={isSaving || !hasUnsavedChanges}
-            className="gap-2"
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : hasUnsavedChanges ? (
-              <>
-                <Save className="h-4 w-4" />
-                Save
-              </>
-            ) : (
-              <>
-                <Check className="h-4 w-4" />
-                Saved
-              </>
-            )}
-          </Button>
+          {canEdit && (
+            <>
+              <ModelSelector userId={userId!} onModelChange={setSelectedModel} />
+              <EnhanceButtons
+                sectionType={sectionSlug}
+                gameContext={gameContext}
+                getAllContent={getAllContent}
+                setAllContent={setAllContent}
+                modelId={selectedModel}
+              />
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleSave}
+                disabled={isSaving || !hasUnsavedChanges}
+                className="gap-2"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : hasUnsavedChanges ? (
+                  <>
+                    <Save className="h-4 w-4" />
+                    Save
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4" />
+                    Saved
+                  </>
+                )}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -321,6 +335,8 @@ export default function GDDSectionPage() {
                   [subSection.id]: newComments,
                 }));
               }}
+              canEdit={canEdit}
+              canComment={canComment}
             />
           ))}
         </CardContent>

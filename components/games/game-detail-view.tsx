@@ -28,6 +28,7 @@ import GameScenesList from "./game-scenes-list";
 import { useUser } from "@/providers/user-context";
 import { formatDistanceToNow } from "date-fns";
 import EditGameModal from "./game-edit-modal";
+import { GameTeamSection } from "./game-team-section";
 import { toast } from "sonner";
 import { updateGameWithImage, updateGameCompletionStatus } from "@/lib/actions/game-actions";
 import { GDD_SECTIONS } from "@/lib/gdd/sections";
@@ -415,6 +416,9 @@ export default function GameDetailView({
           <GameScenesList gameId={game.id} userId={userId as string} />
         </CardContent>
       </Card>
+
+      {/* Team Section */}
+      <GameTeamSection gameId={game.id} userId={userId as string} />
 
       {/* Edit Game Modal */}
       <EditGameModal

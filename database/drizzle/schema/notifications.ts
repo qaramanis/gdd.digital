@@ -9,7 +9,6 @@ import {
 import { relations } from "drizzle-orm";
 import { user } from "./users";
 import { games } from "./games";
-import { teams } from "./teams";
 
 export const notifications = pgTable("notifications", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -40,7 +39,6 @@ export const activityLog = pgTable("activity_log", {
   action: text("action").notNull(),
   details: jsonb("details"),
   gameId: uuid("game_id").references(() => games.id),
-  teamId: uuid("team_id").references(() => teams.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -52,9 +50,5 @@ export const activityLogRelations = relations(activityLog, ({ one }) => ({
   game: one(games, {
     fields: [activityLog.gameId],
     references: [games.id],
-  }),
-  team: one(teams, {
-    fields: [activityLog.teamId],
-    references: [teams.id],
   }),
 }));

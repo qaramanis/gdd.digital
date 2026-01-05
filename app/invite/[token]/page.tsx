@@ -21,10 +21,8 @@ import {
   Check,
   X,
   Clock,
-  FileText,
-  Users,
   Gamepad,
-  Crown,
+  Shield,
   Edit,
   MessageSquare,
   Eye,
@@ -37,30 +35,14 @@ import { useUser } from "@/providers/user-context";
 
 interface InvitationDetails {
   id: string;
-  document_id: string | null;
-  team_id: string | null;
   game_id: string | null;
   inviter_id: string;
   invitee_email: string;
-  permission: string;
+  role: string;
   status: string;
   message: string | null;
   created_at: string;
   expires_at: string;
-  documents?: {
-    id: string;
-    title: string;
-    game_id: string;
-    games?: {
-      name: string;
-      image_url: string;
-    };
-  };
-  teams?: {
-    id: string;
-    name: string;
-    description: string;
-  };
   games?: {
     id: string;
     name: string;
@@ -124,7 +106,7 @@ export default function InvitePage() {
     if (!userId) {
       // Store the invitation token and redirect to login
       localStorage.setItem("pending_invitation", token);
-      router.push("/login");
+      router.push("/sign-in");
       return;
     }
 
@@ -144,12 +126,8 @@ export default function InvitePage() {
 
       toast.success("Invitation accepted successfully!");
 
-      // Redirect to the appropriate page
-      if (invitation.document_id && invitation.documents) {
-        router.push(`/games/${invitation.documents.game_id}`);
-      } else if (invitation.team_id) {
-        router.push("/teams");
-      } else if (invitation.game_id) {
+      // Redirect to the game page
+      if (invitation.game_id) {
         router.push(`/games/${invitation.game_id}`);
       } else {
         router.push("/dashboard");
@@ -183,14 +161,13 @@ export default function InvitePage() {
     }
   };
 
-  const getPermissionIcon = (permission: string) => {
-    switch (permission) {
-      case "owner":
-        return <Crown className="h-5 w-5" />;
+  const getRoleIcon = (role: string) => {
+    switch (role) {
       case "admin":
+        return <Shield className="h-5 w-5" />;
       case "editor":
         return <Edit className="h-5 w-5" />;
-      case "commenter":
+      case "reviewer":
         return <MessageSquare className="h-5 w-5" />;
       case "viewer":
         return <Eye className="h-5 w-5" />;
@@ -199,15 +176,13 @@ export default function InvitePage() {
     }
   };
 
-  const getPermissionDescription = (permission: string) => {
-    switch (permission) {
-      case "owner":
-        return "Full access including deletion";
+  const getRoleDescription = (role: string) => {
+    switch (role) {
       case "admin":
-        return "Can manage team and projects";
+        return "Full access, can manage team members";
       case "editor":
-        return "Can edit content";
-      case "commenter":
+        return "Can edit GDD content and scenes";
+      case "reviewer":
         return "Can view and add comments";
       case "viewer":
         return "Can view only";
@@ -255,31 +230,12 @@ export default function InvitePage() {
     return null;
   }
 
-  const invitationType = invitation.document_id
-    ? "document"
-    : invitation.team_id
-      ? "team"
-      : "game";
-
-  // const invitationTarget =
-  //   invitationType === "document"
-  //     ? invitation.documents
-  //     : invitationType === "team"
-  //       ? invitation.teams
-  //       : invitation.games;
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background to-muted">
       <Card className="w-full max-w-lg">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4">
-            {invitationType === "document" ? (
-              <FileText className="h-12 w-12 text-primary" />
-            ) : invitationType === "team" ? (
-              <Users className="h-12 w-12 text-primary" />
-            ) : (
-              <Gamepad className="h-12 w-12 text-primary" />
-            )}
+            <Gamepad className="h-12 w-12 text-primary" />
           </div>
           <CardTitle className="text-2xl">
             You&apos;re invited to collaborate!
@@ -292,23 +248,13 @@ export default function InvitePage() {
           {/* Invitation Details */}
           <div className="bg-muted rounded-lg p-4 space-y-3">
             <div>
-              <p className="text-sm text-accent mb-1">
-                {invitationType === "document"
-                  ? "Document"
-                  : invitationType === "team"
-                    ? "Team"
-                    : "Game"}
-              </p>
+              <p className="text-sm text-accent mb-1">Game</p>
               <p className="font-semibold text-lg">
-                {invitationType === "document"
-                  ? invitation.documents?.title
-                  : invitationType === "team"
-                    ? invitation.teams?.name
-                    : invitation.games?.name}
+                {invitation.games?.name || "Unknown Game"}
               </p>
-              {invitationType === "document" && invitation.documents?.games && (
-                <p className="text-sm text-accent mt-1">
-                  Game: {invitation.documents.games.name}
+              {invitation.games?.concept && (
+                <p className="text-sm text-accent mt-1 line-clamp-2">
+                  {invitation.games.concept}
                 </p>
               )}
             </div>
@@ -316,11 +262,11 @@ export default function InvitePage() {
             <div>
               <p className="text-sm text-accent mb-1">Your role</p>
               <Badge className="gap-1" variant="secondary">
-                {getPermissionIcon(invitation.permission)}
-                <span className="capitalize">{invitation.permission}</span>
+                {getRoleIcon(invitation.role)}
+                <span className="capitalize">{invitation.role}</span>
               </Badge>
               <p className="text-xs text-accent mt-1">
-                {getPermissionDescription(invitation.permission)}
+                {getRoleDescription(invitation.role)}
               </p>
             </div>
 
@@ -360,7 +306,7 @@ export default function InvitePage() {
               <Button
                 onClick={() => {
                   localStorage.setItem("pending_invitation", token);
-                  router.push("/login");
+                  router.push("/sign-in");
                 }}
                 className="w-full"
                 size="lg"
@@ -371,7 +317,7 @@ export default function InvitePage() {
               <Button
                 onClick={() => {
                   localStorage.setItem("pending_invitation", token);
-                  router.push("/signup");
+                  router.push("/sign-up");
                 }}
                 variant="outline"
                 className="w-full"

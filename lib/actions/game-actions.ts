@@ -1,6 +1,7 @@
 "use server";
 
 import { getUserGames, getGameForUser, getGame, updateGame as updateGameData, createGame as createGameData, GameData } from "@/lib/data/games";
+import { getSharedGames, hasGameAccess } from "@/lib/data/collaboration";
 import { uploadFile, deleteFile, BUCKETS } from "@/lib/storage/minio-client";
 
 // Helper to safely serialize dates that might be Date objects or strings
@@ -22,8 +23,9 @@ export async function fetchGameName(gameId: string) {
 
 export async function fetchUserGames(userId: string) {
   try {
-    const games = await getUserGames(userId);
-    return games.map((g) => ({
+    // Fetch owned games
+    const ownedGames = await getUserGames(userId);
+    const transformedOwned = ownedGames.map((g) => ({
       id: g.id,
       name: g.name,
       concept: g.concept || "",
@@ -33,7 +35,31 @@ export async function fetchUserGames(userId: string) {
       sections: g.sections || [],
       startDate: g.startDate || null,
       timeline: g.timeline || null,
+      isOwner: true,
+      role: "owner" as const,
     }));
+
+    // Fetch shared games
+    const sharedGames = await getSharedGames(userId);
+    const transformedShared = sharedGames.map((g) => ({
+      id: g.id,
+      name: g.name,
+      concept: g.concept || "",
+      imageUrl: g.imageUrl || null,
+      createdAt: toISOStringOrEmpty(g.createdAt),
+      updatedAt: toISOStringOrEmpty(g.updatedAt),
+      sections: g.sections || [],
+      startDate: g.startDate || null,
+      timeline: g.timeline || null,
+      isOwner: false,
+      role: g.role,
+      ownerName: g.user?.name || "Unknown",
+    }));
+
+    // Combine and sort by updatedAt
+    return [...transformedOwned, ...transformedShared].sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    );
   } catch (error) {
     console.error("Error fetching user games:", error);
     return [];
@@ -42,9 +68,16 @@ export async function fetchUserGames(userId: string) {
 
 export async function fetchGamePageData(gameId: string, userId: string) {
   try {
-    const game = await getGameForUser(gameId, userId);
-    if (!game) {
+    // Check if user has access (owner or member)
+    const access = await hasGameAccess(gameId, userId);
+    if (!access.hasAccess) {
       return { game: null, error: "Game not found or you don't have access to it" };
+    }
+
+    // Fetch the game data
+    const game = await getGame(gameId);
+    if (!game) {
+      return { game: null, error: "Game not found" };
     }
 
     return {
@@ -60,6 +93,8 @@ export async function fetchGamePageData(gameId: string, userId: string) {
         created_at: toISOStringOrEmpty(game.createdAt),
         updated_at: toISOStringOrEmpty(game.updatedAt),
         user_id: game.userId,
+        isOwner: access.role === "owner",
+        userRole: access.role,
       },
       error: null,
     };

@@ -10,7 +10,6 @@ import {
 import { relations } from "drizzle-orm";
 import { games } from "./games";
 import { user } from "./users";
-import { teams } from "./teams";
 
 export const documents = pgTable("documents", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -19,7 +18,6 @@ export const documents = pgTable("documents", {
   userId: text("user_id")
     .notNull()
     .references(() => user.id),
-  teamId: uuid("team_id").references(() => teams.id),
   isGameDocument: boolean("is_game_document").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -33,10 +31,6 @@ export const documentsRelations = relations(documents, ({ one }) => ({
   user: one(user, {
     fields: [documents.userId],
     references: [user.id],
-  }),
-  team: one(teams, {
-    fields: [documents.teamId],
-    references: [teams.id],
   }),
 }));
 

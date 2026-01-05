@@ -71,7 +71,7 @@ export function TeamSwitcher({ teams }: TeamSwitcherProps) {
               <DropdownMenuItem
                 key={team.name}
                 onClick={() => setActiveTeam(team)}
-                className="gap-2 p-2 hover:bg-foreground/10 focus:bg-foreground/10 cursor-pointer transition-colors"
+                className="gap-2 p-2 py-1 hover:bg-foreground/10 focus:bg-foreground/10 cursor-pointer transition-colors"
               >
                 <div className="flex size-6 items-center justify-center ">
                   <team.logo className="size-4 shrink-0 text-foreground" />
@@ -80,7 +80,7 @@ export function TeamSwitcher({ teams }: TeamSwitcherProps) {
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator className="bg-foreground/10" />
-            <DropdownMenuItem className="gap-2 p-2 hover:bg-foreground/10 focus:bg-foreground/10 cursor-pointer transition-colors">
+            <DropdownMenuItem className="gap-2 p-2 py-1 hover:bg-foreground/10 focus:bg-foreground/10 cursor-pointer transition-colors">
               <div className="flex size-6 items-center justify-center rounded-md border border-foreground/20 bg-foreground/10">
                 <Plus className="size-4 text-accent" />
               </div>

@@ -7,7 +7,6 @@ export interface DocumentData {
   gameId?: string;
   title: string;
   userId: string;
-  teamId?: string;
   isGameDocument?: boolean;
 }
 

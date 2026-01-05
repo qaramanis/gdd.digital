@@ -9,12 +9,11 @@ import {
   BookOpen,
   GalleryVerticalEnd,
   Home,
-  Inbox,
+  Send,
   NotebookPen,
   Play,
   Search,
   Settings2,
-  Users2,
 } from "lucide-react";
 import { NavMain } from "@/components/dashboard/dashboard-layout/nav-main";
 import { NavUser } from "@/components/dashboard/dashboard-layout/nav-user";
@@ -88,11 +87,6 @@ const data = {
       icon: NotebookPen,
     },
     {
-      title: "Teams",
-      url: "/teams",
-      icon: Users2,
-    },
-    {
       title: "Settings",
       url: "/settings",
       icon: Settings2,
@@ -105,10 +99,9 @@ const data = {
       icon: Search,
     },
     {
-      title: "Inbox",
-      url: "#",
-      icon: Inbox,
-      badge: "3",
+      title: "Messages",
+      url: "/messages",
+      icon: Send,
     },
   ],
 };

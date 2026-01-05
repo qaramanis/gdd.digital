@@ -106,28 +106,28 @@ export function NavUser({ user }: NavUserProps) {
 
             <DropdownMenuGroup>
               <DropdownMenuItem
-                className="gap-2 p-2 hover:bg-foreground/10 focus:bg-foreground/10 cursor-pointer transition-colors"
+                className="gap-2 p-2 py-1 hover:bg-foreground/10 focus:bg-foreground/10 cursor-pointer transition-colors"
                 onClick={() => router.push("/profile")}
               >
                 <User className="mr-2 h-4 w-4" />
                 Profile
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="gap-2 p-2 hover:bg-foreground/10 focus:bg-foreground/10 cursor-pointer transition-colors"
+                className="gap-2 p-2 py-1 hover:bg-foreground/10 focus:bg-foreground/10 cursor-pointer transition-colors"
                 onClick={() => router.push("/settings")}
               >
                 <BadgeCheck className="mr-2 h-4 w-4" />
                 Account Settings
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="gap-2 p-2 hover:bg-foreground/10 focus:bg-foreground/10 cursor-pointer transition-colors"
+                className="gap-2 p-2 py-1 hover:bg-foreground/10 focus:bg-foreground/10 cursor-pointer transition-colors"
                 onClick={() => router.push("/billing")}
               >
                 <CreditCard className="mr-2 h-4 w-4" />
                 Billing
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="gap-2 p-2 hover:bg-foreground/10 focus:bg-foreground/10 cursor-pointer transition-colors"
+                className="gap-2 p-2 py-1 hover:bg-foreground/10 focus:bg-foreground/10 cursor-pointer transition-colors"
                 onClick={() => router.push("/notifications")}
               >
                 <Bell className="mr-2 h-4 w-4" />
@@ -139,7 +139,7 @@ export function NavUser({ user }: NavUserProps) {
 
             <DropdownMenuGroup>
               <DropdownMenuItem
-                className="gap-2 p-2 hover:bg-foreground/10 focus:bg-foreground/10 cursor-pointer transition-colors"
+                className="gap-2 p-2 py-1 hover:bg-foreground/10 focus:bg-foreground/10 cursor-pointer transition-colors"
                 onClick={() => router.push("/upgrade")}
               >
                 <Sparkles className="mr-2 h-4 w-4" />
@@ -150,10 +150,10 @@ export function NavUser({ user }: NavUserProps) {
             <DropdownMenuSeparator />
 
             <DropdownMenuItem
-              className="gap-2 p-2 hover:bg-foreground/10 focus:bg-foreground/10 cursor-pointer transition-colors"
+              className="gap-2 p-2 py-1 cursor-pointer transition-colors text-destructive focus:text-destructive"
               onClick={handleSignOut}
             >
-              <LogOut className="mr-2 h-4 w-4" />
+              <LogOut className="mr-2 h-4 w-4 text-destructive" />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>

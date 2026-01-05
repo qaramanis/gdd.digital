@@ -51,7 +51,6 @@ export function BreadcrumbNav() {
     "/dashboard": "Dashboard",
     "/games": "Games",
     "/notes": "Notes",
-    "/teams": "Teams",
     "/settings": "Settings",
     "/playground": "Playground",
     "/new-game": "New Game",

@@ -8,7 +8,6 @@ import DashboardSkeleton from "./dashboard-skeleton";
 import ActivitySummaryCard from "./activity/activity-summary-card";
 import DashboardHeader from "./dashboard-header";
 import StatsGrid from "./stats/stats-grid";
-import TeamsCard from "./teams/teams-card";
 import RecentProjectsCard from "./projects/recent-projects-card";
 import GddOverviewCard from "./projects/gdd-overview-card";
 import QuickActionsCard from "./quick-actions/quick-actions-card";
@@ -21,15 +20,6 @@ export interface Game {
   created_at: string;
   updated_at: string;
   release_date?: string;
-  team_id?: number;
-}
-
-export interface Team {
-  id: number;
-  name: string;
-  description?: string;
-  created_at: string;
-  member_count?: number;
 }
 
 export interface Note {
@@ -52,14 +42,12 @@ export interface ActivityLog {
 
 export interface Stats {
   totalGames: number;
-  totalTeams: number;
   totalNotes: number;
   recentActivities: number;
 }
 
 export interface DashboardData {
   games: Game[];
-  teams: Team[];
   notes: Note[];
   activities: ActivityLog[];
   stats: Stats;
@@ -73,12 +61,10 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState<DashboardData>({
     games: [],
-    teams: [],
     notes: [],
     activities: [],
     stats: {
       totalGames: 0,
-      totalTeams: 0,
       totalNotes: 0,
       recentActivities: 0,
     },
@@ -123,9 +109,8 @@ export default function DashboardPage() {
         <GddOverviewCard data={dashboardData} />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <ActivitySummaryCard data={dashboardData} />
-        <TeamsCard teams={dashboardData.teams} />
         <QuickActionsCard />
       </div>
     </div>

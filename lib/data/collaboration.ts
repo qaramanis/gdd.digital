@@ -3,93 +3,202 @@ import "server-only";
 import { db, schema } from "@/database/drizzle";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
-
-// Teams
-
-/**
- * Create a new team
- */
-export async function createTeam(
-  name: string,
-  description: string | undefined,
-  ownerId: string
-) {
-  const [team] = await db
-    .insert(schema.teams)
-    .values({
-      name,
-      description,
-      ownerId,
-    })
-    .returning();
-
-  // Add owner as team member
-  await db.insert(schema.teamMembers).values({
-    teamId: team.id,
-    userId: ownerId,
-    role: "owner",
-  });
-
-  return team;
-}
-
-/**
- * Get teams for a user
- */
-export async function getTeamsByUser(userId: string) {
-  const memberships = await db.query.teamMembers.findMany({
-    where: eq(schema.teamMembers.userId, userId),
-    with: {
-      team: {
-        with: {
-          owner: true,
-        },
-      },
-    },
-  });
-
-  return memberships.map((m) => ({
-    ...m.team,
-    role: m.role,
-  }));
-}
-
-/**
- * Get team members
- */
-export async function getTeamMembers(teamId: string) {
-  return db.query.teamMembers.findMany({
-    where: eq(schema.teamMembers.teamId, teamId),
-    with: {
-      user: true,
-    },
-  });
-}
-
-/**
- * Remove a team member
- */
-export async function removeTeamMember(teamId: string, userId: string) {
-  await db
-    .delete(schema.teamMembers)
-    .where(
-      and(
-        eq(schema.teamMembers.teamId, teamId),
-        eq(schema.teamMembers.userId, userId)
-      )
-    );
-}
+import type { GameRole } from "@/database/drizzle/schema/collaboration";
 
 // Invitations
 
 /**
- * Send a team invitation
+ * Decline an invitation
  */
-export async function sendTeamInvitation(
-  teamId: string,
+export async function declineInvitation(invitationId: string): Promise<void> {
+  await db
+    .update(schema.invitations)
+    .set({ status: "declined", respondedAt: new Date() })
+    .where(eq(schema.invitations.id, invitationId));
+}
+
+/**
+ * Get invitation by token
+ */
+export async function getInvitationByToken(token: string) {
+  return db.query.invitations.findFirst({
+    where: eq(schema.invitations.token, token),
+    with: {
+      game: true,
+      inviter: true,
+    },
+  });
+}
+
+/**
+ * Get pending invitations for a user (by email)
+ */
+export async function getPendingInvitations(email: string) {
+  return db.query.invitations.findMany({
+    where: and(
+      eq(schema.invitations.inviteeEmail, email),
+      eq(schema.invitations.status, "pending")
+    ),
+    with: {
+      game: true,
+      inviter: true,
+    },
+    orderBy: [desc(schema.invitations.createdAt)],
+  });
+}
+
+// Activity Log
+
+/**
+ * Log an activity
+ */
+export async function logActivity(data: {
+  userId: string;
+  action: string;
+  details?: any;
+  gameId?: string;
+}) {
+  await db.insert(schema.activityLog).values(data);
+}
+
+/**
+ * Get activity log for a user
+ */
+export async function getUserActivityLog(userId: string, limit?: number) {
+  return db.query.activityLog.findMany({
+    where: eq(schema.activityLog.userId, userId),
+    orderBy: [desc(schema.activityLog.createdAt)],
+    limit,
+    with: {
+      game: true,
+    },
+  });
+}
+
+// Game Members
+
+/**
+ * Get all members of a game (including owner)
+ */
+export async function getGameMembers(gameId: string) {
+  const members = await db.query.gameMembers.findMany({
+    where: eq(schema.gameMembers.gameId, gameId),
+    with: {
+      user: true,
+      inviter: true,
+    },
+    orderBy: [desc(schema.gameMembers.joinedAt)],
+  });
+  return members;
+}
+
+/**
+ * Get game member count
+ */
+export async function getGameMemberCount(gameId: string): Promise<number> {
+  const result = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(schema.gameMembers)
+    .where(eq(schema.gameMembers.gameId, gameId));
+  return Number(result[0]?.count ?? 0);
+}
+
+/**
+ * Check if a user has access to a game (owner or member)
+ */
+export async function hasGameAccess(
+  gameId: string,
+  userId: string
+): Promise<{ hasAccess: boolean; role: GameRole | "owner" | null }> {
+  // Check if user is the game owner
+  const game = await db.query.games.findFirst({
+    where: eq(schema.games.id, gameId),
+    columns: { userId: true },
+  });
+
+  if (game?.userId === userId) {
+    return { hasAccess: true, role: "owner" };
+  }
+
+  // Check if user is a member
+  const member = await db.query.gameMembers.findFirst({
+    where: and(
+      eq(schema.gameMembers.gameId, gameId),
+      eq(schema.gameMembers.userId, userId)
+    ),
+  });
+
+  if (member) {
+    return { hasAccess: true, role: member.role };
+  }
+
+  return { hasAccess: false, role: null };
+}
+
+/**
+ * Add a member to a game
+ */
+export async function addGameMember(
+  gameId: string,
+  userId: string,
+  role: GameRole,
+  invitedBy: string
+) {
+  const [member] = await db
+    .insert(schema.gameMembers)
+    .values({
+      gameId,
+      userId,
+      role,
+      invitedBy,
+    })
+    .returning();
+  return member;
+}
+
+/**
+ * Update a game member's role
+ */
+export async function updateGameMemberRole(
+  gameId: string,
+  userId: string,
+  role: GameRole
+) {
+  const [updated] = await db
+    .update(schema.gameMembers)
+    .set({ role, updatedAt: new Date() })
+    .where(
+      and(
+        eq(schema.gameMembers.gameId, gameId),
+        eq(schema.gameMembers.userId, userId)
+      )
+    )
+    .returning();
+  return updated;
+}
+
+/**
+ * Remove a member from a game
+ */
+export async function removeGameMember(gameId: string, userId: string) {
+  await db
+    .delete(schema.gameMembers)
+    .where(
+      and(
+        eq(schema.gameMembers.gameId, gameId),
+        eq(schema.gameMembers.userId, userId)
+      )
+    );
+}
+
+/**
+ * Send a game invitation
+ */
+export async function sendGameInvitation(
+  gameId: string,
   inviterId: string,
   inviteeEmail: string,
-  role: string,
+  role: GameRole,
   message?: string
 ): Promise<string> {
   const token = uuidv4();
@@ -99,10 +208,10 @@ export async function sendTeamInvitation(
   const [invitation] = await db
     .insert(schema.invitations)
     .values({
-      teamId,
+      gameId,
       inviterId,
       inviteeEmail,
-      permission: role,
+      role,
       message,
       token,
       expiresAt,
@@ -114,9 +223,27 @@ export async function sendTeamInvitation(
 }
 
 /**
- * Accept an invitation
+ * Get pending game invitations for a user (by email)
  */
-export async function acceptInvitation(
+export async function getPendingGameInvitations(email: string) {
+  return db.query.invitations.findMany({
+    where: and(
+      eq(schema.invitations.inviteeEmail, email),
+      eq(schema.invitations.status, "pending"),
+      sql`${schema.invitations.gameId} IS NOT NULL`
+    ),
+    with: {
+      game: true,
+      inviter: true,
+    },
+    orderBy: [desc(schema.invitations.createdAt)],
+  });
+}
+
+/**
+ * Accept a game invitation
+ */
+export async function acceptGameInvitation(
   invitationId: string,
   userId: string
 ): Promise<void> {
@@ -140,6 +267,10 @@ export async function acceptInvitation(
     throw new Error("Invitation has expired");
   }
 
+  if (!invitation.gameId) {
+    throw new Error("Invalid game invitation");
+  }
+
   await db.transaction(async (tx) => {
     // Update invitation status
     await tx
@@ -147,84 +278,51 @@ export async function acceptInvitation(
       .set({ status: "accepted", respondedAt: new Date() })
       .where(eq(schema.invitations.id, invitationId));
 
-    // Add user as team member
-    if (invitation.teamId) {
-      await tx.insert(schema.teamMembers).values({
-        teamId: invitation.teamId,
-        userId,
-        role: invitation.permission,
-        invitedBy: invitation.inviterId,
-      });
-    }
+    // Add user as game member
+    await tx.insert(schema.gameMembers).values({
+      gameId: invitation.gameId!,
+      userId,
+      role: invitation.role || "viewer",
+      invitedBy: invitation.inviterId,
+    });
   });
 }
 
 /**
- * Decline an invitation
+ * Get games where user is a member (not owner)
  */
-export async function declineInvitation(invitationId: string): Promise<void> {
-  await db
-    .update(schema.invitations)
-    .set({ status: "declined", respondedAt: new Date() })
-    .where(eq(schema.invitations.id, invitationId));
+export async function getSharedGames(userId: string) {
+  const memberships = await db.query.gameMembers.findMany({
+    where: eq(schema.gameMembers.userId, userId),
+    with: {
+      game: {
+        with: {
+          user: true,
+        },
+      },
+    },
+    orderBy: [desc(schema.gameMembers.joinedAt)],
+  });
+
+  return memberships.map((m) => ({
+    ...m.game,
+    role: m.role,
+    joinedAt: m.joinedAt,
+  }));
 }
 
 /**
- * Get invitation by token
+ * Get the most recent activity for a game (last editor)
  */
-export async function getInvitationByToken(token: string) {
-  return db.query.invitations.findFirst({
-    where: eq(schema.invitations.token, token),
+export async function getGameRecentActivity(gameId: string) {
+  // Check GDD sections for last editor
+  const recentSection = await db.query.gddSections.findFirst({
+    where: eq(schema.gddSections.gameId, gameId),
+    orderBy: [desc(schema.gddSections.updatedAt)],
     with: {
-      team: true,
-      game: true,
-      inviter: true,
+      lastEditor: true,
     },
   });
-}
 
-/**
- * Get pending invitations for a user (by email)
- */
-export async function getPendingInvitations(email: string) {
-  return db.query.invitations.findMany({
-    where: and(
-      eq(schema.invitations.inviteeEmail, email),
-      eq(schema.invitations.status, "pending")
-    ),
-    with: {
-      team: true,
-      inviter: true,
-    },
-    orderBy: [desc(schema.invitations.createdAt)],
-  });
-}
-
-// Activity Log
-
-/**
- * Log an activity
- */
-export async function logActivity(data: {
-  userId: string;
-  action: string;
-  details?: any;
-  gameId?: string;
-  teamId?: string;
-}) {
-  await db.insert(schema.activityLog).values(data);
-}
-
-/**
- * Get activity log for a user
- */
-export async function getUserActivityLog(userId: string, limit?: number) {
-  return db.query.activityLog.findMany({
-    where: eq(schema.activityLog.userId, userId),
-    orderBy: [desc(schema.activityLog.createdAt)],
-    limit,
-    with: {
-      game: true,
-    },
-  });
+  return recentSection;
 }
