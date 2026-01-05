@@ -48,7 +48,7 @@ export default function SignUpForm() {
           <Link href="/">Logo</Link>
           <div>
             <div className="text-2xl font-bold">Sign Up</div>
-            <div className="mb-8 text-accent">Create a new gdd.now account</div>
+            <div className="mb-8 text-accent">Create a new gdd.digital account</div>
             <div className="flex flex-col gap-4">
               <input
                 type="text"

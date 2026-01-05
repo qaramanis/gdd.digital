@@ -39,7 +39,7 @@ export default function SignInForm() {
           <div>
             <div className="text-2xl font-bold">Log In</div>
             <div className="mb-2 text-accent">
-              Sign in to your gdd.now account
+              Sign in to your gdd.digital account
             </div>
             {isExpired && (
               <div className="mb-4 text-red-400 text-sm">
