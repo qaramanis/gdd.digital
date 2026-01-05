@@ -2,7 +2,7 @@
 
 import { getUserGames, getGameForUser, getGame, updateGame as updateGameData, createGame as createGameData, GameData } from "@/lib/data/games";
 import { getSharedGames, hasGameAccess } from "@/lib/data/collaboration";
-import { uploadFile, deleteFile, BUCKETS } from "@/lib/storage/minio-client";
+import { uploadFile, deleteFile, BUCKETS } from "@/lib/storage/storage-client";
 
 // Helper to safely serialize dates that might be Date objects or strings
 function toISOStringOrEmpty(value: Date | string | null | undefined): string {
@@ -135,14 +135,20 @@ export async function updateGameWithImage(
     if (imageData) {
       const filePath = `${userId}/${gameId}-${Date.now()}-${imageData.fileName}`;
 
-      // Delete old image if it exists in MinIO storage
-      if (data.currentImageUrl && data.currentImageUrl.includes("localhost:9000")) {
+      // Delete old image if it exists in Supabase storage
+      // Supabase URL format: https://[ref].supabase.co/storage/v1/object/public/[bucket]/[path]
+      if (data.currentImageUrl && data.currentImageUrl.includes("supabase.co/storage")) {
         try {
-          const urlParts = data.currentImageUrl.split("/");
-          const bucket = urlParts[urlParts.length - 2];
-          const key = urlParts[urlParts.length - 1];
-          if (bucket && key) {
-            await deleteFile(bucket, `${userId}/${key}`);
+          const url = new URL(data.currentImageUrl);
+          const pathParts = url.pathname.split("/");
+          // Path: /storage/v1/object/public/[bucket]/[...path]
+          const bucketIndex = pathParts.indexOf("public") + 1;
+          if (bucketIndex > 0 && bucketIndex < pathParts.length) {
+            const bucket = pathParts[bucketIndex];
+            const key = pathParts.slice(bucketIndex + 1).join("/");
+            if (bucket && key) {
+              await deleteFile(bucket, key);
+            }
           }
         } catch (e) {
           console.error("Failed to delete old image:", e);

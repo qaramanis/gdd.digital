@@ -9,24 +9,13 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
+      // Supabase Storage
       {
-        protocol: "http",
-        hostname: "localhost",
-        port: "9000",
-        pathname: "/**",
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/public/**",
       },
-      {
-        protocol: "http",
-        hostname: "127.0.0.1",
-        port: "9000",
-        pathname: "/**",
-      },
-      {
-        protocol: "http",
-        hostname: "minio",
-        port: "9000",
-        pathname: "/**",
-      },
+      // External images
       {
         protocol: "https",
         hostname: "image.api.playstation.com",
