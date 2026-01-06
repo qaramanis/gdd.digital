@@ -9,8 +9,10 @@ const authRoutes = ["/sign-in", "/sign-up"];
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Check for Better Auth session cookie
-  const sessionToken = request.cookies.get("better-auth.session_token")?.value;
+  // Check for Better Auth session cookie (with or without __Secure- prefix)
+  const sessionToken =
+    request.cookies.get("__Secure-better-auth.session_token")?.value ||
+    request.cookies.get("better-auth.session_token")?.value;
   const isAuthenticated = !!sessionToken;
 
   // Check if user had a session before (for expired session detection)
