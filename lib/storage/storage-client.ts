@@ -1,5 +1,58 @@
 import "server-only";
-import { supabaseAdmin } from "@/lib/supabase/server";
+
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  DeleteObjectsCommand,
+  ListObjectsV2Command,
+  GetObjectCommand,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
+// Check if we should use Supabase (production) or MinIO (development)
+const useSupabase = !!(
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+// Supabase client (lazy loaded)
+let supabaseAdmin: ReturnType<typeof import("@supabase/supabase-js").createClient> | null = null;
+
+async function getSupabaseAdmin() {
+  if (!supabaseAdmin && useSupabase) {
+    const { createClient } = await import("@supabase/supabase-js");
+    supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
+  }
+  return supabaseAdmin;
+}
+
+// MinIO/S3 client for local development
+const minioEndpoint = process.env.MINIO_ENDPOINT || "localhost";
+const minioPort = process.env.MINIO_PORT || "9000";
+const minioUseSsl = process.env.MINIO_USE_SSL === "true";
+const minioProtocol = minioUseSsl ? "https" : "http";
+const minioInternalEndpoint = `${minioProtocol}://${minioEndpoint}:${minioPort}`;
+const minioPublicUrl = process.env.MINIO_PUBLIC_URL || minioInternalEndpoint;
+
+const s3Client = new S3Client({
+  endpoint: minioInternalEndpoint,
+  region: "us-east-1",
+  credentials: {
+    accessKeyId: process.env.MINIO_ACCESS_KEY || "minioadmin",
+    secretAccessKey: process.env.MINIO_SECRET_KEY || "minioadmin123",
+  },
+  forcePathStyle: true,
+});
 
 export const BUCKETS = {
   GAME_IMAGES: process.env.MINIO_BUCKET_GAME_IMAGES || "game-images",
@@ -10,7 +63,7 @@ export const BUCKETS = {
 export type BucketName = (typeof BUCKETS)[keyof typeof BUCKETS];
 
 /**
- * Upload a file to Supabase storage
+ * Upload a file to storage (Supabase in production, MinIO in development)
  */
 export async function uploadFile(
   bucket: string,
@@ -29,31 +82,59 @@ export async function uploadFile(
     body = file;
   }
 
-  const { error } = await supabaseAdmin.storage.from(bucket).upload(key, body, {
-    contentType,
-    cacheControl: options?.cacheControl || "3600",
-    upsert: options?.upsert ?? true,
-  });
+  if (useSupabase) {
+    // Production: Use Supabase Storage
+    const supabase = await getSupabaseAdmin();
+    if (!supabase) throw new Error("Supabase client not initialized");
 
-  if (error) {
-    throw new Error(`Failed to upload file: ${error.message}`);
+    const { error } = await supabase.storage.from(bucket).upload(key, body, {
+      contentType,
+      cacheControl: options?.cacheControl || "3600",
+      upsert: options?.upsert ?? true,
+    });
+
+    if (error) {
+      throw new Error(`Failed to upload file: ${error.message}`);
+    }
+  } else {
+    // Development: Use MinIO
+    const command = new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+      CacheControl: options?.cacheControl || "max-age=3600",
+    });
+
+    await s3Client.send(command);
   }
 
   return getPublicUrl(bucket, key);
 }
 
 /**
- * Delete a file from Supabase storage
+ * Delete a file from storage
  */
 export async function deleteFile(bucket: string, key: string): Promise<void> {
-  const { error } = await supabaseAdmin.storage.from(bucket).remove([key]);
-  if (error) {
-    throw new Error(`Failed to delete file: ${error.message}`);
+  if (useSupabase) {
+    const supabase = await getSupabaseAdmin();
+    if (!supabase) throw new Error("Supabase client not initialized");
+
+    const { error } = await supabase.storage.from(bucket).remove([key]);
+    if (error) {
+      throw new Error(`Failed to delete file: ${error.message}`);
+    }
+  } else {
+    const command = new DeleteObjectCommand({
+      Bucket: bucket,
+      Key: key,
+    });
+    await s3Client.send(command);
   }
 }
 
 /**
- * Delete multiple files from Supabase storage
+ * Delete multiple files from storage
  */
 export async function deleteFiles(
   bucket: string,
@@ -61,9 +142,22 @@ export async function deleteFiles(
 ): Promise<void> {
   if (keys.length === 0) return;
 
-  const { error } = await supabaseAdmin.storage.from(bucket).remove(keys);
-  if (error) {
-    throw new Error(`Failed to delete files: ${error.message}`);
+  if (useSupabase) {
+    const supabase = await getSupabaseAdmin();
+    if (!supabase) throw new Error("Supabase client not initialized");
+
+    const { error } = await supabase.storage.from(bucket).remove(keys);
+    if (error) {
+      throw new Error(`Failed to delete files: ${error.message}`);
+    }
+  } else {
+    const command = new DeleteObjectsCommand({
+      Bucket: bucket,
+      Delete: {
+        Objects: keys.map((key) => ({ Key: key })),
+      },
+    });
+    await s3Client.send(command);
   }
 }
 
@@ -74,17 +168,34 @@ export async function deleteFolder(
   bucket: string,
   prefix: string
 ): Promise<void> {
-  const { data: files, error: listError } = await supabaseAdmin.storage
-    .from(bucket)
-    .list(prefix);
+  if (useSupabase) {
+    const supabase = await getSupabaseAdmin();
+    if (!supabase) throw new Error("Supabase client not initialized");
 
-  if (listError) {
-    throw new Error(`Failed to list files: ${listError.message}`);
-  }
+    const { data: files, error: listError } = await supabase.storage
+      .from(bucket)
+      .list(prefix);
 
-  if (files && files.length > 0) {
-    const keys = files.map((file) => `${prefix}/${file.name}`);
-    await deleteFiles(bucket, keys);
+    if (listError) {
+      throw new Error(`Failed to list files: ${listError.message}`);
+    }
+
+    if (files && files.length > 0) {
+      const keys = files.map((file) => `${prefix}/${file.name}`);
+      await deleteFiles(bucket, keys);
+    }
+  } else {
+    const listCommand = new ListObjectsV2Command({
+      Bucket: bucket,
+      Prefix: prefix,
+    });
+
+    const listResult = await s3Client.send(listCommand);
+
+    if (listResult.Contents && listResult.Contents.length > 0) {
+      const keys = listResult.Contents.map((obj) => obj.Key!).filter(Boolean);
+      await deleteFiles(bucket, keys);
+    }
   }
 }
 
@@ -92,8 +203,12 @@ export async function deleteFolder(
  * Get the public URL for a file
  */
 export function getPublicUrl(bucket: string, key: string): string {
-  const { data } = supabaseAdmin.storage.from(bucket).getPublicUrl(key);
-  return data.publicUrl;
+  if (useSupabase) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    return `${supabaseUrl}/storage/v1/object/public/${bucket}/${key}`;
+  } else {
+    return `${minioPublicUrl}/${bucket}/${key}`;
+  }
 }
 
 /**
@@ -104,15 +219,26 @@ export async function getSignedDownloadUrl(
   key: string,
   expiresIn = 3600
 ): Promise<string> {
-  const { data, error } = await supabaseAdmin.storage
-    .from(bucket)
-    .createSignedUrl(key, expiresIn);
+  if (useSupabase) {
+    const supabase = await getSupabaseAdmin();
+    if (!supabase) throw new Error("Supabase client not initialized");
 
-  if (error) {
-    throw new Error(`Failed to create signed URL: ${error.message}`);
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(key, expiresIn);
+
+    if (error) {
+      throw new Error(`Failed to create signed URL: ${error.message}`);
+    }
+
+    return data.signedUrl;
+  } else {
+    const command = new GetObjectCommand({
+      Bucket: bucket,
+      Key: key,
+    });
+    return getSignedUrl(s3Client, command, { expiresIn });
   }
-
-  return data.signedUrl;
 }
 
 /**
@@ -121,18 +247,30 @@ export async function getSignedDownloadUrl(
 export async function getSignedUploadUrl(
   bucket: string,
   key: string,
-  _contentType?: string,
-  _expiresIn = 3600
+  contentType?: string,
+  expiresIn = 3600
 ): Promise<string> {
-  const { data, error } = await supabaseAdmin.storage
-    .from(bucket)
-    .createSignedUploadUrl(key);
+  if (useSupabase) {
+    const supabase = await getSupabaseAdmin();
+    if (!supabase) throw new Error("Supabase client not initialized");
 
-  if (error) {
-    throw new Error(`Failed to create signed upload URL: ${error.message}`);
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUploadUrl(key);
+
+    if (error) {
+      throw new Error(`Failed to create signed upload URL: ${error.message}`);
+    }
+
+    return data.signedUrl;
+  } else {
+    const command = new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      ContentType: contentType,
+    });
+    return getSignedUrl(s3Client, command, { expiresIn });
   }
-
-  return data.signedUrl;
 }
 
 /**
@@ -142,16 +280,32 @@ export async function fileExists(
   bucket: string,
   key: string
 ): Promise<boolean> {
-  const pathParts = key.split("/");
-  const fileName = pathParts.pop();
-  const folder = pathParts.join("/");
+  if (useSupabase) {
+    const supabase = await getSupabaseAdmin();
+    if (!supabase) throw new Error("Supabase client not initialized");
 
-  const { data, error } = await supabaseAdmin.storage.from(bucket).list(folder, {
-    limit: 1,
-    search: fileName,
-  });
+    const pathParts = key.split("/");
+    const fileName = pathParts.pop();
+    const folder = pathParts.join("/");
 
-  return !error && data && data.length > 0;
+    const { data, error } = await supabase.storage.from(bucket).list(folder, {
+      limit: 1,
+      search: fileName,
+    });
+
+    return !error && data && data.length > 0;
+  } else {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: bucket,
+        Key: key,
+      });
+      await s3Client.send(command);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }
 
 /**
@@ -165,4 +319,11 @@ export function getBucketForFile(filename: string): string {
     return BUCKETS.SCENES_WEBGL;
   }
   return BUCKETS.SCENE_FILES;
+}
+
+/**
+ * Check which storage backend is being used
+ */
+export function getStorageBackend(): "supabase" | "minio" {
+  return useSupabase ? "supabase" : "minio";
 }
