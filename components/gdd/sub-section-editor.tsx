@@ -477,7 +477,7 @@ export function SubSectionEditor({
               onChange={(e) => setNewCommentContent(e.target.value)}
               disabled={isViewingComment}
               className={cn(
-                "min-h-[60px] resize-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0",
+                "min-h-15 resize-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0",
                 isViewingComment && "opacity-100 cursor-default",
               )}
             />

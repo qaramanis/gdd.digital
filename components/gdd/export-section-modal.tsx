@@ -383,7 +383,7 @@ export function ExportSectionModal({
                 value={fileFormat}
                 onValueChange={(value) => setFileFormat(value as FileFormat)}
               >
-                <SelectTrigger className="w-24">
+                <SelectTrigger className="w-28">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

@@ -121,6 +121,9 @@ export async function updateGameWithImage(
     name: string;
     concept?: string;
     currentImageUrl?: string;
+    status?: string;
+    timeline?: string;
+    startDate?: string;
   },
   imageData?: {
     base64: string;
@@ -166,11 +169,22 @@ export async function updateGameWithImage(
       );
     }
 
+    // Determine completedAt based on status
+    let completedAt: Date | null | undefined;
+    if (data.status === "completed") {
+      completedAt = new Date();
+    } else if (data.status) {
+      completedAt = null;
+    }
+
     // Update game in database
     const savedGame = await updateGameData(gameId, userId, {
       name: data.name.trim(),
       concept: data.concept?.trim() || "",
       imageUrl: finalImageUrl,
+      timeline: data.timeline?.trim() || undefined,
+      startDate: data.startDate || undefined,
+      ...(completedAt !== undefined && { completedAt }),
     });
 
     if (!savedGame) {
@@ -184,6 +198,9 @@ export async function updateGameWithImage(
         imageUrl: savedGame.imageUrl,
         createdAt: toISOStringOrEmpty(savedGame.createdAt),
         updatedAt: toISOStringOrEmpty(savedGame.updatedAt),
+        completedAt: toISOStringOrEmpty(savedGame.completedAt),
+        startDate: savedGame.startDate || "",
+        timeline: savedGame.timeline || "",
       },
     };
   } catch (error) {

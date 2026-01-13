@@ -12,8 +12,6 @@ import { db, schema } from "@/database/drizzle";
 export interface SceneMetadata {
   name: string;
   description?: string;
-  engine: "unity" | "unreal" | "godot" | "custom";
-  engineVersion?: string;
   tags?: string[];
 }
 
@@ -82,16 +80,21 @@ export async function linkExternalScene(
   userId: string
 ) {
   try {
+    // Try to extract file extension from URL
+    const urlPath = new URL(externalUrl).pathname;
+    const fileExt = urlPath.split(".").pop()?.toLowerCase() || "";
+    const fileFormat = fileExt ? `.${fileExt}` : null;
+
     const [scene] = await db
       .insert(schema.gameScenes)
       .values({
         gameId,
         name: metadata.name,
         description: metadata.description,
-        engine: metadata.engine,
-        engineVersion: metadata.engineVersion,
+        engine: "custom", // Default value to satisfy notNull constraint
         storageType: "external",
         sceneUrl: externalUrl,
+        fileFormat,
         isPlayable: true,
         createdBy: userId,
       })

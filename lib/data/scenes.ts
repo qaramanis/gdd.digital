@@ -12,8 +12,6 @@ import {
 export interface SceneMetadata {
   name: string;
   description?: string;
-  engine: "unity" | "unreal" | "godot" | "custom";
-  engineVersion?: string;
   tags?: string[];
 }
 
@@ -50,8 +48,7 @@ export async function uploadScene(
       gameId,
       name: metadata.name,
       description: metadata.description,
-      engine: metadata.engine,
-      engineVersion: metadata.engineVersion,
+      engine: "custom", // Default value to satisfy notNull constraint
       storageType: "supabase",
       bucketPath: path,
       sceneUrl: publicUrl,

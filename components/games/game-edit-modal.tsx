@@ -1,7 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Upload, Save, Loader2, Edit2, Images } from "lucide-react";
+import {
+  Upload,
+  Save,
+  Loader2,
+  Edit2,
+  Images,
+  Calendar,
+  Clock,
+} from "lucide-react";
 import { toast } from "sonner";
 import { updateGameWithImage } from "@/lib/actions/game-actions";
 import Image from "next/image";
@@ -17,12 +25,23 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Game {
   id: string | number;
   name: string;
   concept?: string;
   image_url?: string;
+  status?: string;
+  timeline?: string;
+  start_date?: string;
+  completed_at?: string;
   [key: string]: any;
 }
 
@@ -38,6 +57,9 @@ interface FormData {
   name: string;
   concept: string;
   image_url: string;
+  status: string;
+  timeline: string;
+  start_date: string;
 }
 
 interface Errors {
@@ -55,6 +77,9 @@ const EditGameModal: React.FC<EditGameModalProps> = ({
     name: "",
     concept: "",
     image_url: "",
+    status: "active",
+    timeline: "",
+    start_date: "",
   });
   const [imagePreview, setImagePreview] = useState<string>("");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -63,10 +88,15 @@ const EditGameModal: React.FC<EditGameModalProps> = ({
 
   useEffect(() => {
     if (game && isOpen) {
+      // Determine status from completed_at field
+      const status = game.completed_at ? "completed" : "active";
       setFormData({
         name: game.name || "",
         concept: game.concept || "",
         image_url: game.image_url || "",
+        status,
+        timeline: game.timeline || "",
+        start_date: game.start_date || "",
       });
       setImagePreview(game.image_url || "");
       setImageFile(null);
@@ -88,6 +118,13 @@ const EditGameModal: React.FC<EditGameModalProps> = ({
         [name]: "",
       }));
     }
+  };
+
+  const handleStatusChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      status: value,
+    }));
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -219,8 +256,8 @@ const EditGameModal: React.FC<EditGameModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-xl">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="shrink-0 px-3">
           <DialogTitle className="flex items-center gap-2">
             <Edit2 className="w-5 h-5" />
             Edit Game Information
@@ -230,7 +267,7 @@ const EditGameModal: React.FC<EditGameModalProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-6 py-4 px-3 overflow-y-auto flex-1">
           {/* Game Title */}
           <div className="space-y-2">
             <Label htmlFor="name">Game Title *</Label>
@@ -275,7 +312,7 @@ const EditGameModal: React.FC<EditGameModalProps> = ({
             <Label>Game Image</Label>
             <div className="flex items-start gap-4">
               {/* Image Preview */}
-              <div className="w-28 h-28 rounded-lg border overflow-hidden bg-muted flex-shrink-0 relative">
+              <div className="w-28 h-28 rounded-lg border overflow-hidden bg-muted shrink-0 relative">
                 {imagePreview ? (
                   <Image
                     src={imagePreview}
@@ -329,6 +366,66 @@ const EditGameModal: React.FC<EditGameModalProps> = ({
             </div>
           </div>
 
+          {/* Project Details Section */}
+          <div className="space-y-4 pt-2 border-t">
+            <div className="flex items-center gap-2 text-sm font-medium text-accent">
+              <Clock className="w-4 h-4" />
+              Project Details
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {/* Status */}
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={handleStatusChange}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger id="status">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="on-hold">On Hold</SelectItem>
+                    <SelectItem value="archived">Archived</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Timeline */}
+              <div className="space-y-2">
+                <Label htmlFor="timeline">Timeline</Label>
+                <Input
+                  id="timeline"
+                  name="timeline"
+                  value={formData.timeline}
+                  onChange={handleInputChange}
+                  placeholder="e.g., Q1 2025"
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
+            {/* Start Date */}
+            <div className="space-y-2">
+              <Label htmlFor="start_date">Start Date</Label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-accent" />
+                <Input
+                  id="start_date"
+                  name="start_date"
+                  type="date"
+                  value={formData.start_date}
+                  onChange={handleInputChange}
+                  disabled={isLoading}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Error message */}
           {errors.submit && (
             <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
@@ -337,7 +434,7 @@ const EditGameModal: React.FC<EditGameModalProps> = ({
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0">
           <Button variant="outline" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>

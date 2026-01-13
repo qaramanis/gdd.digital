@@ -99,7 +99,7 @@ export default function GamePage() {
 
 function GameDetailSkeleton() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 px-4">
       {/* Header Skeleton */}
       <div className="space-y-4">
         <Skeleton className="h-10 w-64" />

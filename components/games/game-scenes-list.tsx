@@ -19,7 +19,6 @@ import {
   Globe,
   Package,
   Search,
-  Filter,
   MoreVertical,
   FileCode,
   Gamepad2,
@@ -101,14 +100,22 @@ function formatDate(dateString: string): string {
   }
 }
 
-function getEngineColor(engine: string): string {
-  switch (engine?.toLowerCase()) {
-    case "unity":
-      return "bg-blue-500/10 text-blue-600 border-blue-500/20";
-    case "unreal":
+function getFileTypeColor(fileFormat: string | null): string {
+  const format = fileFormat?.toLowerCase().replace(".", "") || "";
+  switch (format) {
+    case "html":
+      return "bg-orange-500/10 text-orange-600 border-orange-500/20";
+    case "glb":
+    case "gltf":
       return "bg-purple-500/10 text-purple-600 border-purple-500/20";
-    case "godot":
+    case "fbx":
+      return "bg-blue-500/10 text-blue-600 border-blue-500/20";
+    case "obj":
       return "bg-cyan-500/10 text-cyan-600 border-cyan-500/20";
+    case "zip":
+      return "bg-yellow-500/10 text-yellow-600 border-yellow-500/20";
+    case "json":
+      return "bg-green-500/10 text-green-600 border-green-500/20";
     default:
       return "bg-gray-500/10 text-gray-600 border-gray-500/20";
   }
@@ -135,7 +142,6 @@ export default function GameScenesList({
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [engineFilter, setEngineFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
@@ -144,15 +150,48 @@ export default function GameScenesList({
   const [externalUrl, setExternalUrl] = useState("");
   const [sceneName, setSceneName] = useState("");
   const [sceneDescription, setSceneDescription] = useState("");
-  const [sceneEngine, setSceneEngine] = useState<
-    "unity" | "unreal" | "godot" | "custom"
-  >("unity");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Fetch scenes
   useEffect(() => {
-    fetchScenes();
+    let cancelled = false;
+
+    const loadScenes = async () => {
+      setLoading(true);
+      const { data, error } = await getScenesByGame(gameId);
+
+      if (cancelled) return;
+
+      if (error) {
+        toast.error("Failed to load scenes");
+        console.error(error);
+      } else if (data) {
+        setScenes(data as Scene[]);
+      }
+
+      setLoading(false);
+    };
+
+    loadScenes();
+
+    return () => {
+      cancelled = true;
+    };
   }, [gameId]);
+
+  const fetchScenes = async () => {
+    setLoading(true);
+    const { data, error } = await getScenesByGame(gameId);
+
+    if (error) {
+      toast.error("Failed to load scenes");
+      console.error(error);
+    } else if (data) {
+      setScenes(data as Scene[]);
+    }
+
+    setLoading(false);
+  };
 
   // Filter scenes
   useEffect(() => {
@@ -171,30 +210,15 @@ export default function GameScenesList({
       );
     }
 
-    if (engineFilter !== "all") {
-      filtered = filtered.filter((scene) => scene.engine === engineFilter);
-    }
-
     if (statusFilter !== "all") {
       filtered = filtered.filter((scene) => scene.status === statusFilter);
     }
 
-    setFilteredScenes(filtered);
-  }, [scenes, searchQuery, engineFilter, statusFilter]);
-
-  const fetchScenes = async () => {
-    setLoading(true);
-    const { data, error } = await getScenesByGame(gameId);
-
-    if (error) {
-      toast.error("Failed to load scenes");
-      console.error(error);
-    } else if (data) {
-      setScenes(data as Scene[]);
-    }
-
-    setLoading(false);
-  };
+    // Defer setState to avoid synchronous call during effect
+    queueMicrotask(() => {
+      setFilteredScenes(filtered);
+    });
+  }, [scenes, searchQuery, statusFilter]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -228,7 +252,6 @@ export default function GameScenesList({
         {
           name: sceneName,
           description: sceneDescription,
-          engine: sceneEngine,
         },
         userId,
       );
@@ -264,7 +287,6 @@ export default function GameScenesList({
       {
         name: sceneName,
         description: sceneDescription,
-        engine: sceneEngine,
       },
       userId,
     );
@@ -306,17 +328,14 @@ export default function GameScenesList({
     setSelectedFile(null);
     setSceneName("");
     setSceneDescription("");
-    setSceneEngine("unity");
   };
 
   const resetLinkForm = () => {
     setExternalUrl("");
     setSceneName("");
     setSceneDescription("");
-    setSceneEngine("unity");
   };
 
-  const uniqueEngines = Array.from(new Set(scenes.map((s) => s.engine)));
   const uniqueStatuses = Array.from(
     new Set(scenes.map((s) => s.status).filter((s): s is string => s !== null)),
   );
@@ -382,23 +401,6 @@ export default function GameScenesList({
                     onChange={(e) => setSceneDescription(e.target.value)}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="scene-engine">Engine</Label>
-                  <Select
-                    value={sceneEngine}
-                    onValueChange={(v) => setSceneEngine(v as any)}
-                  >
-                    <SelectTrigger id="scene-engine">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unity">Unity</SelectItem>
-                      <SelectItem value="unreal">Unreal Engine</SelectItem>
-                      <SelectItem value="godot">Godot</SelectItem>
-                      <SelectItem value="custom">Custom</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
               <DialogFooter>
                 <Button
@@ -451,7 +453,7 @@ export default function GameScenesList({
                     onChange={handleFileSelect}
                     className="hidden"
                     id="file-upload"
-                    accept=".html,.unity3d,.umap,.glb,.gltf,.zip"
+                    accept=".html,.glb,.gltf,.fbx,.obj,.zip"
                   />
                   <label htmlFor="file-upload">
                     <Button variant="outline" className="mt-4" asChild>
@@ -481,23 +483,6 @@ export default function GameScenesList({
                         value={sceneDescription}
                         onChange={(e) => setSceneDescription(e.target.value)}
                       />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="upload-scene-engine">Engine</Label>
-                      <Select
-                        value={sceneEngine}
-                        onValueChange={(v) => setSceneEngine(v as any)}
-                      >
-                        <SelectTrigger id="upload-scene-engine">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="unity">Unity</SelectItem>
-                          <SelectItem value="unreal">Unreal Engine</SelectItem>
-                          <SelectItem value="godot">Godot</SelectItem>
-                          <SelectItem value="custom">Custom</SelectItem>
-                        </SelectContent>
-                      </Select>
                     </div>
                   </>
                 )}
@@ -665,12 +650,14 @@ export default function GameScenesList({
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center gap-2">
                         <h4 className="font-medium">{scene.name}</h4>
-                        <Badge
-                          variant="outline"
-                          className={getEngineColor(scene.engine)}
-                        >
-                          {scene.engine}
-                        </Badge>
+                        {scene.fileFormat && (
+                          <Badge
+                            variant="outline"
+                            className={getFileTypeColor(scene.fileFormat)}
+                          >
+                            {scene.fileFormat}
+                          </Badge>
+                        )}
                         {(scene.version || 1) > 1 && (
                           <Badge variant="secondary">v{scene.version}</Badge>
                         )}
@@ -734,7 +721,7 @@ export default function GameScenesList({
                               onClick={() => handlePlayScene(scene)}
                             >
                               <Play className="mr-2 h-4 w-4" />
-                              Play in Playground
+                              View in Playground
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                           </>

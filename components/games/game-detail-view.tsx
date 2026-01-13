@@ -30,7 +30,10 @@ import { formatDistanceToNow } from "date-fns";
 import EditGameModal from "./game-edit-modal";
 import { GameTeamSection } from "./game-team-section";
 import { toast } from "sonner";
-import { updateGameWithImage, updateGameCompletionStatus } from "@/lib/actions/game-actions";
+import {
+  updateGameWithImage,
+  updateGameCompletionStatus,
+} from "@/lib/actions/game-actions";
 import { GDD_SECTIONS } from "@/lib/gdd/sections";
 import { GDDSectionContent } from "@/lib/actions/gdd-actions";
 
@@ -83,6 +86,9 @@ export default function GameDetailView({
           name: updatedGame.name,
           concept: updatedGame.concept,
           currentImageUrl: game.image_url,
+          status: updatedGame.status,
+          timeline: updatedGame.timeline,
+          startDate: updatedGame.start_date,
         },
         imageData,
       );
@@ -96,6 +102,9 @@ export default function GameDetailView({
         image_url: result.game?.imageUrl,
         created_at: result.game?.createdAt,
         updated_at: result.game?.updatedAt,
+        completed_at: result.game?.completedAt,
+        start_date: result.game?.startDate,
+        timeline: result.game?.timeline,
       });
 
       toast.success("Game information updated successfully!");
@@ -112,7 +121,7 @@ export default function GameDetailView({
   // Total subsections across all GDD sections
   const totalSubsections = GDD_SECTIONS.reduce(
     (sum, section) => sum + section.subSections.length,
-    0
+    0,
   );
 
   // Count completed subsections (subsections with non-empty content)
@@ -128,9 +137,8 @@ export default function GameDetailView({
     return count + filledSubsections;
   }, 0);
 
-  const gddProgress = totalSubsections > 0
-    ? (completedSubsections / totalSubsections) * 100
-    : 0;
+  const gddProgress =
+    totalSubsections > 0 ? (completedSubsections / totalSubsections) * 100 : 0;
 
   // Determine status based on progress
   const isCompleted = gddProgress === 100;
@@ -141,10 +149,12 @@ export default function GameDetailView({
     if (!game.created_at) return 0;
 
     const startDate = new Date(game.created_at);
-    const endDate = game.completed_at ? new Date(game.completed_at) : new Date();
+    const endDate = game.completed_at
+      ? new Date(game.completed_at)
+      : new Date();
 
     return Math.floor(
-      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
     );
   };
 
@@ -165,14 +175,16 @@ export default function GameDetailView({
 
     // Only update if completion state changed
     if (isCompleted !== wasCompleted && userId) {
-      updateGameCompletionStatus(game.id, userId, isCompleted).then((result) => {
-        if (result.success) {
-          setGame((prev: typeof game) => ({
-            ...prev,
-            completed_at: result.completedAt,
-          }));
-        }
-      });
+      updateGameCompletionStatus(game.id, userId, isCompleted).then(
+        (result) => {
+          if (result.success) {
+            setGame((prev: typeof game) => ({
+              ...prev,
+              completed_at: result.completedAt,
+            }));
+          }
+        },
+      );
       prevIsCompletedRef.current = isCompleted;
     }
   }, [isCompleted, game.id, userId]);
@@ -221,7 +233,7 @@ export default function GameDetailView({
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl font-bold mb-2">{game.name}</h1>
+              <h1 className="text-xl font-bold mb-2">{game.name}</h1>
               <p className="text-accent line-clamp-2">
                 {game.concept || "No concept description provided"}
               </p>
@@ -235,10 +247,12 @@ export default function GameDetailView({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Status</CardTitle>
-            <CheckCircle className={`h-4 w-4 ${isCompleted ? "text-green-500" : "text-yellow-500"}`} />
+            <CheckCircle
+              className={`h-4 w-4 ${isCompleted ? "text-green-500" : "text-yellow-500"}`}
+            />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{status}</div>
+            <div className="text-xl font-bold">{status}</div>
             <p className="text-xs text-accent">
               {daysInDevelopment} days in development
             </p>
@@ -251,7 +265,7 @@ export default function GameDetailView({
             <FileText className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{Math.round(gddProgress)}%</div>
+            <div className="text-xl font-bold">{Math.round(gddProgress)}%</div>
             <p className="text-xs text-accent">
               {completedSubsections}/{totalSubsections} subsections completed
             </p>
@@ -264,7 +278,7 @@ export default function GameDetailView({
             <Calendar className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{game.timeline || "N/A"}</div>
+            <div className="text-xl font-bold">{game.timeline || "N/A"}</div>
             <p className="text-xs text-accent">
               Started {game.start_date ? formatDate(game.start_date) : "N/A"}
             </p>
@@ -277,7 +291,7 @@ export default function GameDetailView({
             <Clock className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-xl font-bold">
               {formatDistanceToNow(new Date(game.updated_at), {
                 addSuffix: true,
               })}
@@ -324,7 +338,8 @@ export default function GameDetailView({
                     />
                   </div>
                   <p className="text-xs text-accent">
-                    {completedSubsections} of {totalSubsections} subsections completed
+                    {completedSubsections} of {totalSubsections} subsections
+                    completed
                   </p>
                 </div>
                 <Button
@@ -393,7 +408,9 @@ export default function GameDetailView({
                 <span className="text-accent">Status</span>
                 <Badge
                   variant="secondary"
-                  className={isCompleted ? "bg-green-500 text-white" : "text-background"}
+                  className={
+                    isCompleted ? "bg-green-500 text-white" : "text-background"
+                  }
                 >
                   {status}
                 </Badge>
