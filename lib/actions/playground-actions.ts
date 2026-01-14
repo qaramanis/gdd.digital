@@ -1,7 +1,7 @@
 "use server";
 
 import { db, schema } from "@/database/drizzle";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 export async function fetchScene(sceneId: string) {
   try {
@@ -18,7 +18,7 @@ export async function fetchScene(sceneId: string) {
       description: scene.description,
       engine: scene.engine,
       scene_url: scene.sceneUrl,
-      is_playable: scene.isPlayable,
+      file_format: scene.fileFormat,
       created_at: scene.createdAt?.toISOString() || "",
     };
   } catch (error) {
@@ -30,10 +30,7 @@ export async function fetchScene(sceneId: string) {
 export async function fetchGameScenes(gameId: string) {
   try {
     const scenes = await db.query.gameScenes.findMany({
-      where: and(
-        eq(schema.gameScenes.gameId, gameId),
-        eq(schema.gameScenes.isPlayable, true)
-      ),
+      where: eq(schema.gameScenes.gameId, gameId),
       orderBy: (scenes, { desc }) => [desc(scenes.createdAt)],
     });
 
@@ -44,7 +41,7 @@ export async function fetchGameScenes(gameId: string) {
       description: scene.description,
       engine: scene.engine,
       scene_url: scene.sceneUrl,
-      is_playable: scene.isPlayable,
+      file_format: scene.fileFormat,
       created_at: scene.createdAt?.toISOString() || "",
     }));
   } catch (error) {

@@ -56,7 +56,6 @@ export const gameScenes = pgTable("game_scenes", {
   version: integer("version").default(1),
   status: text("status").default("active"),
   isPublic: boolean("is_public").default(false),
-  isPlayable: boolean("is_playable").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

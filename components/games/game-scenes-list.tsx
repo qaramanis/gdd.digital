@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import {
   Upload,
   Link,
-  Play,
   Download,
   ExternalLink,
   Eye,
@@ -21,7 +20,6 @@ import {
   Search,
   MoreVertical,
   FileCode,
-  Gamepad2,
   Layers,
   Loader2,
 } from "lucide-react";
@@ -305,7 +303,7 @@ export default function GameScenesList({
   };
 
   const handlePlayScene = (scene: Scene) => {
-    if (scene.isPlayable && scene.sceneUrl) {
+    if (scene.sceneUrl) {
       router.push(`/playground?scene=${scene.id}&game=${gameId}`);
     }
   };
@@ -321,6 +319,39 @@ export default function GameScenesList({
     } else {
       toast.success("Scene deleted");
       await fetchScenes();
+    }
+  };
+
+  const handleDownloadScene = async (scene: Scene) => {
+    if (!scene.sceneUrl) {
+      toast.error("No file available for download");
+      return;
+    }
+
+    try {
+      const response = await fetch(scene.sceneUrl);
+      if (!response.ok) throw new Error("Download failed");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+
+      // Extract filename from sceneData or use scene name
+      const sceneData = scene.sceneData as { originalFileName?: string } | null;
+      const fileName =
+        sceneData?.originalFileName || `${scene.name}${scene.fileFormat || ""}`;
+
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Download started");
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.error("Failed to download file");
     }
   };
 
@@ -544,7 +575,7 @@ export default function GameScenesList({
           </Select>*/}
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-40">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -577,12 +608,12 @@ export default function GameScenesList({
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-accent">Playable</p>
+                <p className="text-sm text-accent">External</p>
                 <p className="text-2xl font-bold">
-                  {scenes.filter((s) => s.isPlayable).length}
+                  {scenes.filter((s) => s.storageType === "external").length}
                 </p>
               </div>
-              <Gamepad2 className="h-8 w-8 text-green-500/20" />
+              <Globe className="h-8 w-8 text-green-500/20" />
             </div>
           </CardContent>
         </Card>
@@ -622,7 +653,7 @@ export default function GameScenesList({
       </div>
 
       {/* Scenes List */}
-      <Card>
+      <Card className="px-4">
         <CardHeader>
           <CardTitle>All Scenes ({filteredScenes.length})</CardTitle>
         </CardHeader>
@@ -643,7 +674,10 @@ export default function GameScenesList({
                   key={scene.id}
                   className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
                 >
-                  <div className="flex items-start gap-4 flex-1">
+                  <div
+                    className="flex items-start gap-4 flex-1 cursor-pointer"
+                    onClick={() => handlePlayScene(scene)}
+                  >
                     <div className="p-2 rounded-lg bg-muted">
                       {getStorageIcon(scene.storageType || "minio")}
                     </div>
@@ -672,7 +706,11 @@ export default function GameScenesList({
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           {scene.updatedAt
-                            ? formatDate(typeof scene.updatedAt === "string" ? scene.updatedAt : scene.updatedAt.toISOString())
+                            ? formatDate(
+                                typeof scene.updatedAt === "string"
+                                  ? scene.updatedAt
+                                  : scene.updatedAt.toISOString(),
+                              )
                             : "N/A"}
                         </span>
                         {scene.fileSize && (
@@ -697,17 +735,6 @@ export default function GameScenesList({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {scene.isPlayable && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handlePlayScene(scene)}
-                      >
-                        <Play className="mr-2 h-4 w-4" />
-                        Play
-                      </Button>
-                    )}
-
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button size="sm" variant="ghost">
@@ -715,27 +742,25 @@ export default function GameScenesList({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {scene.isPlayable && (
+                        {scene.sceneUrl && (
                           <>
                             <DropdownMenuItem
                               onClick={() => handlePlayScene(scene)}
                             >
-                              <Play className="mr-2 h-4 w-4" />
+                              <Eye className="mr-2 h-4 w-4" />
                               View in Playground
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                           </>
                         )}
                         <DropdownMenuItem>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
                           <Edit className="mr-2 h-4 w-4" />
                           Edit Metadata
                         </DropdownMenuItem>
-                        {scene.bucketPath && (
-                          <DropdownMenuItem>
+                        {scene.sceneUrl && scene.storageType !== "external" && (
+                          <DropdownMenuItem
+                            onClick={() => handleDownloadScene(scene)}
+                          >
                             <Download className="mr-2 h-4 w-4" />
                             Download
                           </DropdownMenuItem>
@@ -752,10 +777,10 @@ export default function GameScenesList({
                         )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
-                          className="text-destructive"
+                          className="text-destructive focus:text-destructive"
                           onClick={() => handleDeleteScene(scene.id)}
                         >
-                          <Trash2 className="mr-2 h-4 w-4" />
+                          <Trash2 className="mr-2 h-4 w-4 text-destructive" />
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>

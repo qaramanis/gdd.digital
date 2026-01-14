@@ -32,7 +32,6 @@ export interface Scene {
   version: number | null;
   status: string | null;
   isPublic: boolean | null;
-  isPlayable: boolean | null;
   createdAt: Date | null;
   updatedAt: Date | null;
   createdBy: string;
@@ -95,7 +94,6 @@ export async function linkExternalScene(
         storageType: "external",
         sceneUrl: externalUrl,
         fileFormat,
-        isPlayable: true,
         createdBy: userId,
       })
       .returning();

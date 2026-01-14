@@ -35,7 +35,6 @@ export interface Scene {
   version: number | null;
   status: string | null;
   isPublic: boolean | null;
-  isPlayable: boolean | null;
   createdAt: Date | null;
   updatedAt: Date | null;
   createdBy: string;
@@ -75,7 +74,6 @@ export class SceneService {
           engineVersion: metadata.engineVersion,
           storageType: "external",
           sceneUrl: externalUrl,
-          isPlayable: true,
           createdBy: userId,
         })
         .returning();

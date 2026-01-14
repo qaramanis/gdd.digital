@@ -49,6 +49,9 @@ export default function Playground() {
   const [sceneDescription, setSceneDescription] = useState("");
   const [externalUrl, setExternalUrl] = useState("");
 
+  // Get initial scene ID from URL params
+  const initialSceneId = searchParams.get("scene");
+
   // Initialize from URL params
   useEffect(() => {
     const gameId = searchParams.get("game");
@@ -355,7 +358,9 @@ export default function Playground() {
             gameName={selectedGameName}
             selectedSceneId={selectedScene?.id || null}
             onSceneSelect={handleSceneSelect}
+            onSceneDelete={() => setSceneListRefreshKey((prev) => prev + 1)}
             refreshKey={sceneListRefreshKey}
+            initialSceneId={initialSceneId}
           />
         </Card>
 

@@ -54,7 +54,6 @@ export async function uploadScene(
       sceneUrl: publicUrl,
       fileSize: file.size,
       fileFormat: `.${fileExt}`,
-      isPlayable: isWebGL,
       sceneData: {
         originalFileName: file.name,
         mimeType: file.type,
