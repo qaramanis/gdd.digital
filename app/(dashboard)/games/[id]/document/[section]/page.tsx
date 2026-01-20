@@ -30,6 +30,7 @@ import { useUser } from "@/providers/user-context";
 import { SubSectionEditor } from "@/components/gdd/sub-section-editor";
 import { EnhanceButtons } from "@/components/gdd/enhance-buttons";
 import { ModelSelector } from "@/components/gdd/model-selector";
+import { SuggestedMechanics } from "@/components/gdd/suggested-mechanics";
 import { ArrowLeft, ArrowRight, Save, Loader2, Check } from "lucide-react";
 import type { AIModelId } from "@/database/drizzle/schema/preferences";
 
@@ -37,6 +38,7 @@ interface GameContext {
   name: string;
   concept: string;
   timeline?: string;
+  genre?: string;
 }
 
 type UserRole = "owner" | "admin" | "editor" | "reviewer" | "viewer";
@@ -94,6 +96,7 @@ export default function GDDSectionPage() {
           name: gameResult.game.name,
           concept: gameResult.game.concept || "",
           timeline: gameResult.game.timeline,
+          genre: gameResult.game.genre,
         });
         // Set user role from game data
         setUserRole((gameResult.game.userRole as UserRole) || "viewer");
@@ -342,6 +345,13 @@ export default function GDDSectionPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
+          {sectionSlug === "gameplay-mechanics" && gameContext.genre && userId && (
+            <SuggestedMechanics
+              genre={gameContext.genre}
+              gameId={gameId}
+              userId={userId}
+            />
+          )}
           {section.subSections.map((subSection) => (
             <SubSectionEditor
               key={subSection.id}

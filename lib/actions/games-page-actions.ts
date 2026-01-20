@@ -20,6 +20,7 @@ export async function fetchGamesPageData(userId: string) {
       id: g.id,
       name: g.name,
       concept: g.concept || null,
+      genre: g.genre || null,
       updatedAt: g.updatedAt?.toISOString() || null,
       imageUrl: g.imageUrl || null,
       documents: g.documents || [],
@@ -32,6 +33,7 @@ export async function fetchGamesPageData(userId: string) {
       id: g.id,
       name: g.name,
       concept: g.concept || null,
+      genre: g.genre || null,
       updatedAt: g.updatedAt?.toISOString() || null,
       imageUrl: g.imageUrl || null,
       documents: [], // Shared games don't have documents preloaded

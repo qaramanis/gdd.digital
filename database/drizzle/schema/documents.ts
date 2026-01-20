@@ -87,6 +87,39 @@ export const sceneTagsRelations = relations(sceneTags, ({ one }) => ({
   }),
 }));
 
+export const gameCharacters = pgTable("game_characters", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  gameId: uuid("game_id")
+    .notNull()
+    .references(() => games.id, { onDelete: "cascade" }),
+  createdBy: text("created_by")
+    .notNull()
+    .references(() => user.id),
+  name: text("name").notNull(),
+  description: text("description"),
+  mechanics: jsonb("mechanics").$type<string[]>().default([]),
+  storageType: text("storage_type").default("minio"),
+  modelUrl: text("model_url"),
+  bucketPath: text("bucket_path"),
+  thumbnailUrl: text("thumbnail_url"),
+  fileSize: integer("file_size"),
+  fileFormat: text("file_format"),
+  modelData: jsonb("model_data"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const gameCharactersRelations = relations(gameCharacters, ({ one }) => ({
+  game: one(games, {
+    fields: [gameCharacters.gameId],
+    references: [games.id],
+  }),
+  creator: one(user, {
+    fields: [gameCharacters.createdBy],
+    references: [user.id],
+  }),
+}));
+
 export const notes = pgTable("notes", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id")

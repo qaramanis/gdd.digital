@@ -5,6 +5,7 @@ export const BUCKETS = {
   GAME_IMAGES: process.env.MINIO_BUCKET_GAME_IMAGES || "game-images",
   SCENES_WEBGL: process.env.MINIO_BUCKET_SCENES_WEBGL || "game-scenes-webgl",
   SCENE_FILES: process.env.MINIO_BUCKET_SCENE_FILES || "game-scene-files",
+  CHARACTER_MODELS: process.env.MINIO_BUCKET_CHARACTER_MODELS || "character-models",
 } as const;
 
 export type BucketName = (typeof BUCKETS)[keyof typeof BUCKETS];

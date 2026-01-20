@@ -25,6 +25,7 @@ interface GameSelectorProps {
   userId: string;
   selectedGameId: string | null;
   onGameChange: (gameId: string | null, gameName: string | null) => void;
+  onGameNameSync?: (gameName: string) => void;
 }
 
 interface GameOption {
@@ -38,9 +39,11 @@ export function GameSelector({
   userId,
   selectedGameId,
   onGameChange,
+  onGameNameSync,
 }: GameSelectorProps) {
   const [games, setGames] = useState<GameOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasSyncedName, setHasSyncedName] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,6 +80,24 @@ export function GameSelector({
     };
   }, [userId]);
 
+  // Sync game name when games are loaded and selectedGameId is set from URL params
+  useEffect(() => {
+    if (!loading && games.length > 0 && selectedGameId && !hasSyncedName && onGameNameSync) {
+      const matchingGame = games.find((g) => g.id === selectedGameId);
+      if (matchingGame) {
+        onGameNameSync(matchingGame.name);
+        setHasSyncedName(true);
+      }
+    }
+  }, [loading, games, selectedGameId, hasSyncedName, onGameNameSync]);
+
+  // Reset sync flag when game changes via user selection
+  useEffect(() => {
+    if (!selectedGameId) {
+      setHasSyncedName(false);
+    }
+  }, [selectedGameId]);
+
   const handleSelectGame = (game: GameOption | null) => {
     if (game) {
       onGameChange(game.id, game.name);
@@ -102,7 +123,7 @@ export function GameSelector({
         <Button
           variant="outline"
           size="sm"
-          className="gap-2 min-w-45 justify-between"
+          className="gap-2 min-w-0 justify-between"
         >
           <div className="flex items-center gap-2">
             {currentGame?.imageUrl ? (

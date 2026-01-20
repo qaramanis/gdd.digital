@@ -104,7 +104,7 @@ export const SUBSECTION_COMPLETION_PROMPTS: Record<string, string> = {
 
   // Assets section
   art_style_direction: `Complete this art direction section. Define the overall visual style and artistic vision.`,
-  character_environments_models: `Complete this asset description. Describe character designs, environments, and model requirements.`,
+  character_environments_models: `Write a brief 1-paragraph summary describing the key character designs, environment styles, and 3D model requirements for this game. Keep it concise and focused on the most essential visual elements.`,
   visual_assets_graphics: `Complete this visual assets section. List graphical assets - textures, sprites, effects, animations.`,
   audio_assets: `Complete this audio section. Define music, sound effects, voice acting, and ambient audio needs.`,
   ui_ux_assets: `Complete this UI assets section. List interface elements - buttons, icons, menus, HUD components.`,

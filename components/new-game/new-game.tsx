@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { createGame } from "@/lib/actions/game-actions";
 import { useUser } from "@/providers/user-context";
 import { toast } from "sonner";
+import { genres } from "@/lib/data/game-genres";
 
 const timelines = [
   { value: "1-3 months", label: "1-3 months" },
@@ -47,6 +48,7 @@ export default function NewGamePage() {
 
   const [name, setName] = useState("");
   const [concept, setConcept] = useState("");
+  const [genre, setGenre] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [timeline, setTimeline] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -66,7 +68,7 @@ export default function NewGamePage() {
       return;
     }
 
-    if (!name.trim() || !concept.trim()) {
+    if (!name.trim() || !concept.trim() || !genre) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -78,6 +80,7 @@ export default function NewGamePage() {
         {
           name: name.trim(),
           concept: concept.trim(),
+          genre,
           startDate: startDate ? format(startDate, "yyyy-MM-dd") : undefined,
           timeline: timeline || undefined,
         },
@@ -143,6 +146,29 @@ export default function NewGamePage() {
                 onChange={(e) => setConcept(e.target.value)}
                 disabled={isSubmitting}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Genre <span className="text-destructive">*</span></Label>
+              <Select
+                value={genre}
+                onValueChange={setGenre}
+                disabled={isSubmitting}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select genre" />
+                </SelectTrigger>
+                <SelectContent>
+                  {genres.map((g) => (
+                    <SelectItem key={g.value} value={g.value}>
+                      {g.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {genre && genres.find(g => g.value === genre)?.description}
+              </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

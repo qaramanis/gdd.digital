@@ -348,18 +348,23 @@ export function GameTeamSection({ gameId, userId }: GameTeamSectionProps) {
           </div>
 
           {/* Sent Invitations */}
+          {(() => {
+            const pendingInvitations = teamData.invitations.filter(
+              (inv) => inv.status !== "accepted"
+            );
+            return (
           <div className="pt-4 border-t space-y-3">
             <div className="flex items-center gap-2 text-sm text-accent">
               <Mail className="h-4 w-4" />
-              <span>Sent Invitations ({teamData.invitations.length})</span>
+              <span>Sent Invitations ({pendingInvitations.length})</span>
             </div>
-            {teamData.invitations.length === 0 ? (
+            {pendingInvitations.length === 0 ? (
               <p className="text-sm text-accent italic">
-                Sent invitations will be displayed here
+                Sent invitations will be displayed here. Note: Accepted invitations are not displayed
               </p>
             ) : (
               <>
-                {teamData.invitations.slice(0, 5).map((invitation) => (
+                {pendingInvitations.slice(0, 5).map((invitation) => (
                   <div
                     key={invitation.id}
                     className="flex items-center justify-between"
@@ -382,7 +387,7 @@ export function GameTeamSection({ gameId, userId }: GameTeamSectionProps) {
                         </p>
                       </div>
                     </div>
-                    <Badge
+                    {/*<Badge
                       variant="secondary"
                       className={
                         invitation.status === "pending"
@@ -401,17 +406,19 @@ export function GameTeamSection({ gameId, userId }: GameTeamSectionProps) {
                           : invitation.status === "accepted"
                             ? "Accepted"
                             : "Expired"}
-                    </Badge>
+                    </Badge>*/}
                   </div>
                 ))}
-                {teamData.invitations.length > 5 && (
+                {pendingInvitations.length > 5 && (
                   <p className="text-xs text-accent text-center pt-2">
-                    +{teamData.invitations.length - 5} more invitations
+                    +{pendingInvitations.length - 5} more invitations
                   </p>
                 )}
               </>
             )}
           </div>
+            );
+          })()}
         </CardContent>
       </Card>
 

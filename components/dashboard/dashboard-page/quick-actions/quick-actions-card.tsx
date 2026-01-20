@@ -6,7 +6,7 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
-import { Gamepad2, FileText, UserPlus, Zap } from "lucide-react";
+import { Gamepad2, FileText, GalleryVerticalEnd, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function QuickActionsCard() {
@@ -15,7 +15,7 @@ export default function QuickActionsCard() {
   const actions = [
     { icon: Gamepad2, label: "New Game", path: "/new-game" },
     { icon: FileText, label: "New Note", path: "/notes/new" },
-    { icon: UserPlus, label: "Create Team", path: "/teams" },
+    { icon: GalleryVerticalEnd, label: "View Games", path: "/games" },
     { icon: Zap, label: "Scene Viewer", path: "/playground" },
   ];
 

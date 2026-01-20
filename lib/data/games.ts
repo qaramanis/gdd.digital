@@ -6,6 +6,7 @@ import { eq, desc, and } from "drizzle-orm";
 export interface GameData {
   name: string;
   concept?: string;
+  genre?: string;
   startDate?: string;
   timeline?: string;
   sections?: string[];

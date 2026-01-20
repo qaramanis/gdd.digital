@@ -32,11 +32,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { genres } from "@/lib/data/game-genres";
 
 interface Game {
   id: string | number;
   name: string;
   concept?: string;
+  genre?: string;
   image_url?: string;
   status?: string;
   timeline?: string;
@@ -56,6 +58,7 @@ interface EditGameModalProps {
 interface FormData {
   name: string;
   concept: string;
+  genre: string;
   image_url: string;
   status: string;
   timeline: string;
@@ -76,6 +79,7 @@ const EditGameModal: React.FC<EditGameModalProps> = ({
   const [formData, setFormData] = useState<FormData>({
     name: "",
     concept: "",
+    genre: "",
     image_url: "",
     status: "active",
     timeline: "",
@@ -93,6 +97,7 @@ const EditGameModal: React.FC<EditGameModalProps> = ({
       setFormData({
         name: game.name || "",
         concept: game.concept || "",
+        genre: game.genre || "",
         image_url: game.image_url || "",
         status,
         timeline: game.timeline || "",
@@ -124,6 +129,13 @@ const EditGameModal: React.FC<EditGameModalProps> = ({
     setFormData((prev) => ({
       ...prev,
       status: value,
+    }));
+  };
+
+  const handleGenreChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      genre: value,
     }));
   };
 
@@ -371,6 +383,27 @@ const EditGameModal: React.FC<EditGameModalProps> = ({
             <div className="flex items-center gap-2 text-sm font-medium text-accent">
               <Clock className="w-4 h-4" />
               Project Details
+            </div>
+
+            {/* Genre */}
+            <div className="space-y-2">
+              <Label htmlFor="genre">Genre</Label>
+              <Select
+                value={formData.genre}
+                onValueChange={handleGenreChange}
+                disabled={isLoading}
+              >
+                <SelectTrigger id="genre">
+                  <SelectValue placeholder="Select genre" />
+                </SelectTrigger>
+                <SelectContent>
+                  {genres.map((g) => (
+                    <SelectItem key={g.value} value={g.value}>
+                      {g.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

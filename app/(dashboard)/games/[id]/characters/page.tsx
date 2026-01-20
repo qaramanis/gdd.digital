@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { fetchGamePageData } from "@/lib/actions/game-actions";
-import { getAllGDDSections, GDDSectionContent } from "@/lib/actions/gdd-actions";
 import { useUser } from "@/providers/user-context";
-import GameDetailView from "@/components/games/game-detail-view";
+import { CharacterListPage } from "@/components/gdd/character-list-page";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 interface Game {
   id: string;
@@ -16,21 +16,13 @@ interface Game {
   concept: string;
   genre: string;
   image_url: string;
-  sections: string[];
-  start_date: string;
-  timeline: string;
-  completed_at: string;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
 }
 
-export default function GamePage() {
+export default function CharactersPage() {
   const params = useParams();
   const router = useRouter();
   const { userId, loading: userLoading } = useUser();
   const [game, setGame] = useState<Game | null>(null);
-  const [gddSections, setGddSections] = useState<Record<string, GDDSectionContent>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,10 +37,7 @@ export default function GamePage() {
       setLoading(true);
       setError(null);
 
-      const [gameData, sectionsData] = await Promise.all([
-        fetchGamePageData(params.id as string, userId!),
-        getAllGDDSections(params.id as string),
-      ]);
+      const gameData = await fetchGamePageData(params.id as string, userId!);
 
       if (gameData.error) {
         setError(gameData.error);
@@ -56,7 +45,6 @@ export default function GamePage() {
       }
 
       setGame(gameData.game as Game);
-      setGddSections(sectionsData.sections || {});
     } catch (err: any) {
       console.error("Error fetching game data:", err);
       setError(err.message || "Failed to load game data");
@@ -65,7 +53,6 @@ export default function GamePage() {
     }
   };
 
-  // Redirect to sign-in if no user after loading completes
   useEffect(() => {
     if (!userLoading && !userId) {
       router.push("/sign-in");
@@ -73,7 +60,7 @@ export default function GamePage() {
   }, [userLoading, userId, router]);
 
   if (loading || userLoading || !userId) {
-    return <GameDetailSkeleton />;
+    return <CharactersPageSkeleton />;
   }
 
   if (error) {
@@ -95,34 +82,48 @@ export default function GamePage() {
     );
   }
 
-  return <GameDetailView game={game} gddSections={gddSections} />;
+  return (
+    <div className="space-y-6 px-4">
+      <div className="flex items-center gap-4">
+        <Link href={`/games/${game.id}`}>
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Game
+          </Button>
+        </Link>
+      </div>
+      <div>
+        <h1 className="text-3xl font-bold">{game.name} - Characters</h1>
+        <p className="text-muted-foreground mt-1">
+          Manage all characters for this game
+        </p>
+      </div>
+      <CharacterListPage gameId={game.id} userId={userId} />
+    </div>
+  );
 }
 
-function GameDetailSkeleton() {
+function CharactersPageSkeleton() {
   return (
-    <div className="space-y-8 px-4">
-      {/* Header Skeleton */}
+    <div className="space-y-6 px-4">
+      <Skeleton className="h-8 w-32" />
+      <div className="space-y-2">
+        <Skeleton className="h-10 w-96" />
+        <Skeleton className="h-6 w-64" />
+      </div>
       <div className="space-y-4">
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-6 w-96" />
-      </div>
-
-      {/* Stats Skeleton */}
-      <div className="grid gap-4 md:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
-          <Skeleton key={i} className="h-24" />
-        ))}
-      </div>
-
-      {/* Content Grid Skeleton */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
-          <Skeleton className="h-96" />
-          <Skeleton className="h-64" />
+        <div className="flex gap-4">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-10 w-40" />
+          <Skeleton className="h-10 w-32" />
         </div>
-        <div className="space-y-6">
-          <Skeleton className="h-48" />
-          <Skeleton className="h-64" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} className="h-48" />
+          ))}
+        </div>
+        <div className="flex justify-center">
+          <Skeleton className="h-10 w-64" />
         </div>
       </div>
     </div>

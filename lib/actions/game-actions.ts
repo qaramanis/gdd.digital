@@ -3,6 +3,8 @@
 import { getUserGames, getGameForUser, getGame, updateGame as updateGameData, createGame as createGameData, GameData } from "@/lib/data/games";
 import { getSharedGames, hasGameAccess } from "@/lib/data/collaboration";
 import { uploadFile, deleteFile, BUCKETS } from "@/lib/storage/storage-client";
+import { db, schema } from "@/database/drizzle";
+import { eq } from "drizzle-orm";
 
 // Helper to safely serialize dates that might be Date objects or strings
 function toISOStringOrEmpty(value: Date | string | null | undefined): string {
@@ -29,6 +31,7 @@ export async function fetchUserGames(userId: string) {
       id: g.id,
       name: g.name,
       concept: g.concept || "",
+      genre: g.genre || null,
       imageUrl: g.imageUrl || null,
       createdAt: toISOStringOrEmpty(g.createdAt),
       updatedAt: toISOStringOrEmpty(g.updatedAt),
@@ -45,6 +48,7 @@ export async function fetchUserGames(userId: string) {
       id: g.id,
       name: g.name,
       concept: g.concept || "",
+      genre: g.genre || null,
       imageUrl: g.imageUrl || null,
       createdAt: toISOStringOrEmpty(g.createdAt),
       updatedAt: toISOStringOrEmpty(g.updatedAt),
@@ -85,6 +89,7 @@ export async function fetchGamePageData(gameId: string, userId: string) {
         id: game.id,
         name: game.name,
         concept: game.concept || "",
+        genre: game.genre || "",
         image_url: game.imageUrl || "",
         sections: game.sections || [],
         start_date: game.startDate || "",
@@ -120,6 +125,7 @@ export async function updateGameWithImage(
   data: {
     name: string;
     concept?: string;
+    genre?: string;
     currentImageUrl?: string;
     status?: string;
     timeline?: string;
@@ -181,6 +187,7 @@ export async function updateGameWithImage(
     const savedGame = await updateGameData(gameId, userId, {
       name: data.name.trim(),
       concept: data.concept?.trim() || "",
+      genre: data.genre || undefined,
       imageUrl: finalImageUrl,
       timeline: data.timeline?.trim() || undefined,
       startDate: data.startDate || undefined,
@@ -196,6 +203,7 @@ export async function updateGameWithImage(
       game: {
         ...savedGame,
         imageUrl: savedGame.imageUrl,
+        genre: savedGame.genre || "",
         createdAt: toISOStringOrEmpty(savedGame.createdAt),
         updatedAt: toISOStringOrEmpty(savedGame.updatedAt),
         completedAt: toISOStringOrEmpty(savedGame.completedAt),
@@ -221,5 +229,67 @@ export async function updateGameCompletionStatus(
   } catch (error) {
     console.error("Error updating game completion status:", error);
     return { success: false, error: "Failed to update completion status" };
+  }
+}
+
+export async function saveGameMechanics(
+  gameId: string,
+  userId: string,
+  mechanics: string[]
+) {
+  try {
+    // Check if user has access to the game
+    const access = await hasGameAccess(gameId, userId);
+    if (!access.hasAccess) {
+      return { success: false, error: "You don't have access to this game" };
+    }
+
+    // Only owners, admins, and editors can modify mechanics
+    if (!access.role || !["owner", "admin", "editor"].includes(access.role)) {
+      return { success: false, error: "You don't have permission to modify mechanics" };
+    }
+
+    // Delete existing mechanics for this game
+    await db
+      .delete(schema.gameMechanics)
+      .where(eq(schema.gameMechanics.gameId, gameId));
+
+    // Insert new mechanics
+    if (mechanics.length > 0) {
+      await db.insert(schema.gameMechanics).values(
+        mechanics.map((name) => ({
+          gameId,
+          name,
+        }))
+      );
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error saving game mechanics:", error);
+    return { success: false, error: "Failed to save mechanics" };
+  }
+}
+
+export async function getGameMechanics(gameId: string, userId: string) {
+  try {
+    // Check if user has access to the game
+    const access = await hasGameAccess(gameId, userId);
+    if (!access.hasAccess) {
+      return { success: false, mechanics: [], error: "You don't have access to this game" };
+    }
+
+    // Fetch mechanics for the game
+    const mechanics = await db.query.gameMechanics.findMany({
+      where: eq(schema.gameMechanics.gameId, gameId),
+    });
+
+    return {
+      success: true,
+      mechanics: mechanics.map((m) => m.name),
+    };
+  } catch (error) {
+    console.error("Error fetching game mechanics:", error);
+    return { success: false, mechanics: [], error: "Failed to fetch mechanics" };
   }
 }

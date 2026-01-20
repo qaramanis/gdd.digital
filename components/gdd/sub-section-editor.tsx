@@ -31,6 +31,7 @@ import {
   type GDDComment,
 } from "@/lib/actions/gdd-actions";
 import { Textarea } from "@/components/ui/textarea";
+import { CharacterList } from "@/components/gdd/character-list";
 
 interface GameContext {
   name: string;
@@ -578,6 +579,16 @@ export function SubSectionEditor({
         >
           <EditorContent editor={editor} />
         </div>
+
+        {/* Character list for character_environments_models subsection */}
+        {subSectionType === "character_environments_models" && (
+          <div className="mt-2">
+            <CharacterList
+              gameId={gameId}
+              userId={userId}
+            />
+          </div>
+        )}
 
         {/* AI Generated content preview */}
         {(generatedContent || isGenerating) && (

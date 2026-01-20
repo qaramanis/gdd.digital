@@ -15,6 +15,7 @@ export const games = pgTable("games", {
     .references(() => user.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   concept: text("concept"),
+  genre: text("genre"),
   startDate: text("start_date"),
   timeline: text("timeline"),
   sections: jsonb("sections").$type<string[]>().default([]),
@@ -24,9 +25,26 @@ export const games = pgTable("games", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const gameMechanics = pgTable("game_mechanics", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  gameId: uuid("game_id")
+    .notNull()
+    .references(() => games.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const gamesRelations = relations(games, ({ one, many }) => ({
   user: one(user, {
     fields: [games.userId],
     references: [user.id],
+  }),
+  mechanics: many(gameMechanics),
+}));
+
+export const gameMechanicsRelations = relations(gameMechanics, ({ one }) => ({
+  game: one(games, {
+    fields: [gameMechanics.gameId],
+    references: [games.id],
   }),
 }));

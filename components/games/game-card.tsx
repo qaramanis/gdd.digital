@@ -61,6 +61,11 @@ export function GameCard({
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold text-lg">{game.name}</h3>
+                  {game.genre && (
+                    <Badge variant="secondary" className="capitalize">
+                      {game.genre.replace("-", "/")}
+                    </Badge>
+                  )}
                   {hasDocument && (
                     <Badge variant="outline">
                       <FileText className="h-3 w-3 mr-1" />
@@ -199,6 +204,12 @@ export function GameCard({
               </span>
               <span>{getTimeAgo(game.updated_at)}</span>
             </div>
+            {game.genre && (
+              <div className="flex items-center justify-between">
+                <span className="text-accent">Genre</span>
+                <span className="capitalize">{game.genre.replace("-", "/")}</span>
+              </div>
+            )}
             {game.start_date && (
               <div className="flex items-center justify-between">
                 <span className="text-accent flex items-center gap-1">

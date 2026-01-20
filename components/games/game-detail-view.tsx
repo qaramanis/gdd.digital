@@ -12,6 +12,7 @@ import {
   Play,
   CheckCircle,
   BookOpen,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -85,6 +86,7 @@ export default function GameDetailView({
         {
           name: updatedGame.name,
           concept: updatedGame.concept,
+          genre: updatedGame.genre,
           currentImageUrl: game.image_url,
           status: updatedGame.status,
           timeline: updatedGame.timeline,
@@ -100,6 +102,7 @@ export default function GameDetailView({
       setGame({
         ...result.game,
         image_url: result.game?.imageUrl,
+        genre: result.game?.genre,
         created_at: result.game?.createdAt,
         updated_at: result.game?.updatedAt,
         completed_at: result.game?.completedAt,
@@ -381,6 +384,15 @@ export default function GameDetailView({
                 <Play className="h-4 w-4 mr-2" />
                 Open Playground
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => router.push(`/games/${game.id}/characters`)}
+              >
+                <User className="h-4 w-4 mr-2" />
+                View Characters
+              </Button>
             </CardContent>
           </Card>
 
@@ -398,6 +410,12 @@ export default function GameDetailView({
                 <span className="text-accent">Last Modified</span>
                 <span>{formatDate(game.updated_at)}</span>
               </div>
+              {game.genre && (
+                <div className="flex justify-between">
+                  <span className="text-accent">Genre</span>
+                  <span className="capitalize">{game.genre.replace("-", " / ")}</span>
+                </div>
+              )}
               {game.timeline && (
                 <div className="flex justify-between">
                   <span className="text-accent">Timeline</span>
