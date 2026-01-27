@@ -293,3 +293,182 @@ export async function getGameMechanics(gameId: string, userId: string) {
     return { success: false, mechanics: [], error: "Failed to fetch mechanics" };
   }
 }
+
+export interface CustomMechanic {
+  id: string;
+  name: string;
+  description: string;
+  isSelected: boolean;
+}
+
+export async function saveCustomMechanic(
+  gameId: string,
+  userId: string,
+  name: string,
+  description: string
+) {
+  try {
+    // Check if user has access to the game
+    const access = await hasGameAccess(gameId, userId);
+    if (!access.hasAccess) {
+      return { success: false, error: "You don't have access to this game" };
+    }
+
+    // Only owners, admins, and editors can add custom mechanics
+    if (!access.role || !["owner", "admin", "editor"].includes(access.role)) {
+      return { success: false, error: "You don't have permission to add custom mechanics" };
+    }
+
+    // Insert the custom mechanic
+    const [inserted] = await db.insert(schema.customGameMechanics).values({
+      gameId,
+      name: name.trim(),
+      description: description.trim(),
+      isSelected: "true",
+    }).returning();
+
+    return {
+      success: true,
+      mechanic: {
+        id: inserted.id,
+        name: inserted.name,
+        description: inserted.description,
+        isSelected: inserted.isSelected === "true",
+      }
+    };
+  } catch (error) {
+    console.error("Error saving custom mechanic:", error);
+    return { success: false, error: "Failed to save custom mechanic" };
+  }
+}
+
+export async function updateCustomMechanicSelection(
+  gameId: string,
+  userId: string,
+  mechanicId: string,
+  isSelected: boolean
+) {
+  try {
+    // Check if user has access to the game
+    const access = await hasGameAccess(gameId, userId);
+    if (!access.hasAccess) {
+      return { success: false, error: "You don't have access to this game" };
+    }
+
+    // Only owners, admins, and editors can modify custom mechanics
+    if (!access.role || !["owner", "admin", "editor"].includes(access.role)) {
+      return { success: false, error: "You don't have permission to modify custom mechanics" };
+    }
+
+    // Update the selection status
+    await db
+      .update(schema.customGameMechanics)
+      .set({ isSelected: isSelected ? "true" : "false" })
+      .where(eq(schema.customGameMechanics.id, mechanicId));
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating custom mechanic selection:", error);
+    return { success: false, error: "Failed to update custom mechanic" };
+  }
+}
+
+export async function deleteCustomMechanic(
+  gameId: string,
+  userId: string,
+  mechanicId: string
+) {
+  try {
+    // Check if user has access to the game
+    const access = await hasGameAccess(gameId, userId);
+    if (!access.hasAccess) {
+      return { success: false, error: "You don't have access to this game" };
+    }
+
+    // Only owners, admins, and editors can delete custom mechanics
+    if (!access.role || !["owner", "admin", "editor"].includes(access.role)) {
+      return { success: false, error: "You don't have permission to delete custom mechanics" };
+    }
+
+    // Delete the custom mechanic
+    await db
+      .delete(schema.customGameMechanics)
+      .where(eq(schema.customGameMechanics.id, mechanicId));
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting custom mechanic:", error);
+    return { success: false, error: "Failed to delete custom mechanic" };
+  }
+}
+
+export async function updateCustomMechanic(
+  gameId: string,
+  userId: string,
+  mechanicId: string,
+  data: { name?: string; description?: string }
+) {
+  try {
+    // Check if user has access to the game
+    const access = await hasGameAccess(gameId, userId);
+    if (!access.hasAccess) {
+      return { success: false, error: "You don't have access to this game" };
+    }
+
+    // Only owners, admins, and editors can update custom mechanics
+    if (!access.role || !["owner", "admin", "editor"].includes(access.role)) {
+      return { success: false, error: "You don't have permission to update custom mechanics" };
+    }
+
+    // Update the custom mechanic
+    const [updated] = await db
+      .update(schema.customGameMechanics)
+      .set({
+        name: data.name?.trim(),
+        description: data.description?.trim(),
+      })
+      .where(eq(schema.customGameMechanics.id, mechanicId))
+      .returning();
+
+    return {
+      success: true,
+      mechanic: {
+        id: updated.id,
+        name: updated.name,
+        description: updated.description,
+        isSelected: updated.isSelected === "true",
+      }
+    };
+  } catch (error) {
+    console.error("Error updating custom mechanic:", error);
+    return { success: false, error: "Failed to update custom mechanic" };
+  }
+}
+
+export async function getCustomMechanics(gameId: string, userId: string) {
+  try {
+    // Check if user has access to the game
+    const access = await hasGameAccess(gameId, userId);
+    if (!access.hasAccess) {
+      return { success: false, mechanics: [], error: "You don't have access to this game" };
+    }
+
+    // Fetch custom mechanics for the game
+    const mechanics = await db.query.customGameMechanics.findMany({
+      where: eq(schema.customGameMechanics.gameId, gameId),
+    });
+
+    return {
+      success: true,
+      mechanics: mechanics.map((m) => ({
+        id: m.id,
+        name: m.name,
+        description: m.description,
+        isSelected: m.isSelected === "true",
+      })),
+    };
+  } catch (error) {
+    console.error("Error fetching custom mechanics:", error);
+    return { success: false, mechanics: [], error: "Failed to fetch custom mechanics" };
+  }
+}

@@ -30,6 +30,8 @@ import {
   MoreVertical,
   Pencil,
   Loader2,
+  Play,
+  Sparkles,
 } from "lucide-react";
 import {
   getAudioAssetsByGame,
@@ -46,7 +48,9 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
+  TooltipProvider,
 } from "@/components/ui/tooltip";
+import { AudioPlayerModal } from "./audio-player-modal";
 
 interface AudioAssetListProps {
   gameId: string;
@@ -76,10 +80,17 @@ export function AudioAssetList({ gameId, userId }: AudioAssetListProps) {
   const [linkingAsset, setLinkingAsset] = useState<AudioAsset | null>(null);
   const [availableCharacters, setAvailableCharacters] = useState<{ id: string; name: string }[]>([]);
   const [availableScenes, setAvailableScenes] = useState<{ id: string; name: string }[]>([]);
+  const [availableMechanics, setAvailableMechanics] = useState<string[]>([]);
+  const [availableCustomMechanics, setAvailableCustomMechanics] = useState<{ id: string; name: string; description: string }[]>([]);
   const [selectedCharacters, setSelectedCharacters] = useState<string[]>([]);
   const [selectedScenes, setSelectedScenes] = useState<string[]>([]);
+  const [selectedMechanics, setSelectedMechanics] = useState<string[]>([]);
   const [isLoadingLinks, setIsLoadingLinks] = useState(false);
   const [isSavingLinks, setIsSavingLinks] = useState(false);
+
+  // Listen modal state
+  const [listenModalOpen, setListenModalOpen] = useState(false);
+  const [listeningAsset, setListeningAsset] = useState<AudioAsset | null>(null);
 
   useEffect(() => {
     async function loadAudioAssets() {
@@ -164,6 +175,7 @@ export function AudioAssetList({ gameId, userId }: AudioAssetListProps) {
     setLinkingAsset(asset);
     setSelectedCharacters(asset.linkedCharacters || []);
     setSelectedScenes(asset.linkedScenes || []);
+    setSelectedMechanics(asset.linkedMechanics || []);
     setLinkModalOpen(true);
 
     setIsLoadingLinks(true);
@@ -172,6 +184,8 @@ export function AudioAssetList({ gameId, userId }: AudioAssetListProps) {
       if (result.success) {
         setAvailableCharacters(result.characters || []);
         setAvailableScenes(result.scenes || []);
+        setAvailableMechanics(result.mechanics || []);
+        setAvailableCustomMechanics(result.customMechanics || []);
       } else {
         toast.error(result.error || "Failed to load characters and scenes");
       }
@@ -199,6 +213,14 @@ export function AudioAssetList({ gameId, userId }: AudioAssetListProps) {
     );
   };
 
+  const handleToggleMechanic = (mechanic: string) => {
+    setSelectedMechanics((prev) =>
+      prev.includes(mechanic)
+        ? prev.filter((m) => m !== mechanic)
+        : [...prev, mechanic]
+    );
+  };
+
   const handleSaveLinks = async () => {
     if (!linkingAsset) return;
 
@@ -207,6 +229,7 @@ export function AudioAssetList({ gameId, userId }: AudioAssetListProps) {
       const result = await updateAudioAsset(linkingAsset.id, userId, {
         linkedCharacters: selectedCharacters,
         linkedScenes: selectedScenes,
+        linkedMechanics: selectedMechanics,
       });
 
       if (result.success && result.audioAsset) {
@@ -415,7 +438,7 @@ export function AudioAssetList({ gameId, userId }: AudioAssetListProps) {
                     side="top"
                     className="max-w-64 text-wrap text-center"
                   >
-                    Link to characters and scenes
+                    Link to characters, scenes, and mechanics
                   </TooltipContent>
                 </Tooltip>
                 <DropdownMenu>
@@ -425,6 +448,17 @@ export function AudioAssetList({ gameId, userId }: AudioAssetListProps) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    {asset.audioUrl && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setListeningAsset(asset);
+                          setListenModalOpen(true);
+                        }}
+                      >
+                        <Play className="mr-2 h-4 w-4" />
+                        Listen
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem onClick={() => handleEditAsset(asset)}>
                       <Pencil className="mr-2 h-4 w-4" />
                       Edit
@@ -615,9 +649,9 @@ export function AudioAssetList({ gameId, userId }: AudioAssetListProps) {
       >
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Link to Characters & Scenes</DialogTitle>
+            <DialogTitle>Link to Characters, Scenes & Mechanics</DialogTitle>
             <DialogDescription>
-              Select characters and scenes to associate with &quot;{linkingAsset ? getDisplayName(linkingAsset) : ""}&quot;.
+              Select characters, scenes, and mechanics to associate with &quot;{linkingAsset ? getDisplayName(linkingAsset) : ""}&quot;.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
@@ -626,6 +660,7 @@ export function AudioAssetList({ gameId, userId }: AudioAssetListProps) {
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : (
+              <TooltipProvider>
               <div className="space-y-6">
                 {/* Characters Section */}
                 <div>
@@ -679,11 +714,68 @@ export function AudioAssetList({ gameId, userId }: AudioAssetListProps) {
                   )}
                 </div>
 
+                {/* Mechanics Section */}
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Mechanics</h4>
+                  {availableMechanics.length === 0 && availableCustomMechanics.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No mechanics available. Add mechanics in the Gameplay Mechanics section first.
+                    </p>
+                  ) : (
+                    <div className="space-y-3 max-h-32 overflow-y-auto">
+                      {/* Regular Mechanics */}
+                      {availableMechanics.length > 0 && (
+                        <div className="space-y-2">
+                          {availableMechanics.map((mechanic) => (
+                            <label
+                              key={mechanic}
+                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer"
+                            >
+                              <Checkbox
+                                checked={selectedMechanics.includes(mechanic)}
+                                onCheckedChange={() => handleToggleMechanic(mechanic)}
+                                disabled={isSavingLinks}
+                              />
+                              <span className="text-sm">{mechanic}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                      {/* Custom Mechanics */}
+                      {availableCustomMechanics.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Sparkles className="h-3 w-3" />
+                            Custom Mechanics
+                          </p>
+                          {availableCustomMechanics.map((mechanic) => (
+                            <Tooltip key={mechanic.id}>
+                              <TooltipTrigger asChild>
+                                <label className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer">
+                                  <Checkbox
+                                    checked={selectedMechanics.includes(mechanic.name)}
+                                    onCheckedChange={() => handleToggleMechanic(mechanic.name)}
+                                    disabled={isSavingLinks}
+                                  />
+                                  <span className="text-sm">{mechanic.name}</span>
+                                </label>
+                              </TooltipTrigger>
+                              <TooltipContent side="right">
+                                <p>{mechanic.description}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 {/* Selected Summary */}
-                {(selectedCharacters.length > 0 || selectedScenes.length > 0) && (
+                {(selectedCharacters.length > 0 || selectedScenes.length > 0 || selectedMechanics.length > 0) && (
                   <div className="pt-4 border-t">
                     <p className="text-xs text-muted-foreground mb-2">
-                      Selected: {selectedCharacters.length} character(s), {selectedScenes.length} scene(s)
+                      Selected: {selectedCharacters.length} character(s), {selectedScenes.length} scene(s), {selectedMechanics.length} mechanic(s)
                     </p>
                     <div className="flex flex-wrap gap-1">
                       {selectedCharacters.map((id) => {
@@ -708,10 +800,19 @@ export function AudioAssetList({ gameId, userId }: AudioAssetListProps) {
                           </span>
                         ) : null;
                       })}
+                      {selectedMechanics.map((mechanic) => (
+                        <span
+                          key={mechanic}
+                          className="text-xs bg-accent/20 text-accent-foreground px-2 py-1 rounded"
+                        >
+                          {mechanic}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 )}
               </div>
+              </TooltipProvider>
             )}
           </div>
           <DialogFooter>
@@ -741,6 +842,18 @@ export function AudioAssetList({ gameId, userId }: AudioAssetListProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Listen Modal */}
+      <AudioPlayerModal
+        open={listenModalOpen}
+        onOpenChange={(open) => {
+          setListenModalOpen(open);
+          if (!open) setListeningAsset(null);
+        }}
+        audioUrl={listeningAsset?.audioUrl || null}
+        name={listeningAsset?.name || listeningAsset?.filename || "Audio"}
+        description={listeningAsset?.description}
+      />
     </div>
   );
 }

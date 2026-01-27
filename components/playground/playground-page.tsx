@@ -28,7 +28,9 @@ import { useUser } from "@/providers/user-context";
 import { GameSelector } from "./game-selector";
 import { PlaygroundSidebar } from "./playground-sidebar";
 import { SceneViewer } from "./scene-viewer";
+import { AudioPlayer } from "./audio-player";
 import { toast } from "sonner";
+import { type AudioAsset } from "@/lib/actions/audio-asset-actions";
 import {
   uploadScene,
   linkExternalScene,
@@ -49,6 +51,7 @@ export default function Playground() {
   const [selectedGameName, setSelectedGameName] = useState<string | null>(null);
   const [selectedScene, setSelectedScene] = useState<Scene | null>(null);
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
+  const [selectedAudioAsset, setSelectedAudioAsset] = useState<AudioAsset | null>(null);
   const [sidebarRefreshKey, setSidebarRefreshKey] = useState(0);
 
   // Upload dialog state
@@ -95,6 +98,7 @@ export default function Playground() {
     setSelectedGameName(gameName);
     setSelectedScene(null);
     setSelectedCharacter(null);
+    setSelectedAudioAsset(null);
   };
 
   const handleGameNameSync = (gameName: string) => {
@@ -103,12 +107,26 @@ export default function Playground() {
 
   const handleSceneSelect = (scene: Scene | null) => {
     setSelectedScene(scene);
-    if (scene) setSelectedCharacter(null);
+    if (scene) {
+      setSelectedCharacter(null);
+      setSelectedAudioAsset(null);
+    }
   };
 
   const handleCharacterSelect = (character: Character | null) => {
     setSelectedCharacter(character);
-    if (character) setSelectedScene(null);
+    if (character) {
+      setSelectedScene(null);
+      setSelectedAudioAsset(null);
+    }
+  };
+
+  const handleAudioAssetSelect = (audioAsset: AudioAsset | null) => {
+    setSelectedAudioAsset(audioAsset);
+    if (audioAsset) {
+      setSelectedScene(null);
+      setSelectedCharacter(null);
+    }
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -621,8 +639,10 @@ export default function Playground() {
             userId={userId}
             selectedSceneId={selectedScene?.id || null}
             selectedCharacterId={selectedCharacter?.id || null}
+            selectedAudioAssetId={selectedAudioAsset?.id || null}
             onSceneSelect={handleSceneSelect}
             onCharacterSelect={handleCharacterSelect}
+            onAudioAssetSelect={handleAudioAssetSelect}
             onSceneDelete={() => setSidebarRefreshKey((prev) => prev + 1)}
             refreshKey={sidebarRefreshKey}
             initialSceneId={initialSceneId}
@@ -632,7 +652,14 @@ export default function Playground() {
 
         {/* Viewer */}
         <Card className="flex-1 overflow-hidden py-0">
-          {selectedScene ? (
+          {selectedAudioAsset && selectedAudioAsset.audioUrl ? (
+            <AudioPlayer
+              audioUrl={selectedAudioAsset.audioUrl}
+              name={selectedAudioAsset.name || selectedAudioAsset.filename}
+              description={selectedAudioAsset.description}
+              fileFormat={selectedAudioAsset.fileFormat}
+            />
+          ) : selectedScene ? (
             <SceneViewer
               sceneUrl={selectedScene.sceneUrl || null}
               fileFormat={selectedScene.fileFormat}

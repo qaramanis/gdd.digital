@@ -48,3 +48,21 @@ export const gameMechanicsRelations = relations(gameMechanics, ({ one }) => ({
     references: [games.id],
   }),
 }));
+
+export const customGameMechanics = pgTable("custom_game_mechanics", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  gameId: uuid("game_id")
+    .notNull()
+    .references(() => games.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  isSelected: text("is_selected").default("true"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const customGameMechanicsRelations = relations(customGameMechanics, ({ one }) => ({
+  game: one(games, {
+    fields: [customGameMechanics.gameId],
+    references: [games.id],
+  }),
+}));

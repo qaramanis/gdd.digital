@@ -1,0 +1,1 @@
+ALTER TABLE "game_audio_assets" ADD COLUMN "linked_mechanics" jsonb DEFAULT '[]'::jsonb;

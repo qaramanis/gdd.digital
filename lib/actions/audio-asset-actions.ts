@@ -14,6 +14,7 @@ export interface AudioAsset {
   description: string | null;
   linkedCharacters: string[];
   linkedScenes: string[];
+  linkedMechanics: string[];
   storageType: string | null;
   audioUrl: string | null;
   bucketPath: string | null;
@@ -31,6 +32,7 @@ export interface CreateAudioAssetData {
   description?: string;
   linkedCharacters?: string[];
   linkedScenes?: string[];
+  linkedMechanics?: string[];
 }
 
 export async function getAudioAssetsByGame(gameId: string, userId: string) {
@@ -51,6 +53,7 @@ export async function getAudioAssetsByGame(gameId: string, userId: string) {
         ...a,
         linkedCharacters: (a.linkedCharacters as string[]) || [],
         linkedScenes: (a.linkedScenes as string[]) || [],
+        linkedMechanics: (a.linkedMechanics as string[]) || [],
       })),
     };
   } catch (error) {
@@ -135,6 +138,7 @@ export async function getPaginatedAudioAssets({
         ...a,
         linkedCharacters: (a.linkedCharacters as string[]) || [],
         linkedScenes: (a.linkedScenes as string[]) || [],
+        linkedMechanics: (a.linkedMechanics as string[]) || [],
       })),
       totalCount,
       totalPages,
@@ -178,6 +182,7 @@ export async function createAudioAsset(
         description: data.description || null,
         linkedCharacters: data.linkedCharacters || [],
         linkedScenes: data.linkedScenes || [],
+        linkedMechanics: data.linkedMechanics || [],
       })
       .returning();
 
@@ -187,6 +192,7 @@ export async function createAudioAsset(
         ...audioAsset,
         linkedCharacters: (audioAsset.linkedCharacters as string[]) || [],
         linkedScenes: (audioAsset.linkedScenes as string[]) || [],
+        linkedMechanics: (audioAsset.linkedMechanics as string[]) || [],
       },
     };
   } catch (error) {
@@ -225,6 +231,7 @@ export async function updateAudioAsset(
         description: data.description !== undefined ? data.description || null : undefined,
         linkedCharacters: data.linkedCharacters,
         linkedScenes: data.linkedScenes,
+        linkedMechanics: data.linkedMechanics,
         updatedAt: new Date(),
       })
       .where(eq(schema.gameAudioAssets.id, audioAssetId))
@@ -236,6 +243,7 @@ export async function updateAudioAsset(
         ...audioAsset,
         linkedCharacters: (audioAsset.linkedCharacters as string[]) || [],
         linkedScenes: (audioAsset.linkedScenes as string[]) || [],
+        linkedMechanics: (audioAsset.linkedMechanics as string[]) || [],
       },
     };
   } catch (error) {
@@ -349,6 +357,7 @@ export async function uploadAudioFile(
         ...audioAsset,
         linkedCharacters: (audioAsset.linkedCharacters as string[]) || [],
         linkedScenes: (audioAsset.linkedScenes as string[]) || [],
+        linkedMechanics: (audioAsset.linkedMechanics as string[]) || [],
       },
     };
   } catch (error) {
@@ -393,6 +402,7 @@ export async function createAudioAssetWithFile(
         description: metadata.description || null,
         linkedCharacters: [],
         linkedScenes: [],
+        linkedMechanics: [],
         fileFormat: `.${fileExt}`,
         fileSize: fileData.size,
       })
@@ -424,6 +434,7 @@ export async function createAudioAssetWithFile(
         ...updatedAsset,
         linkedCharacters: (updatedAsset.linkedCharacters as string[]) || [],
         linkedScenes: (updatedAsset.linkedScenes as string[]) || [],
+        linkedMechanics: (updatedAsset.linkedMechanics as string[]) || [],
       },
     };
   } catch (error) {
@@ -457,10 +468,28 @@ export async function getLinkedEntities(gameId: string, userId: string) {
       orderBy: (s, { asc }) => [asc(s.name)],
     });
 
+    // Get selected mechanics for this game
+    const mechanics = await db.query.gameMechanics.findMany({
+      where: eq(schema.gameMechanics.gameId, gameId),
+    });
+
+    // Get custom mechanics for this game (only selected ones)
+    const customMechanics = await db.query.customGameMechanics.findMany({
+      where: eq(schema.customGameMechanics.gameId, gameId),
+    });
+
     return {
       success: true,
       characters: characters.map(c => ({ id: c.id, name: c.name })),
       scenes: scenes.map(s => ({ id: s.id, name: s.name })),
+      mechanics: mechanics.map(m => m.name),
+      customMechanics: customMechanics
+        .filter(m => m.isSelected === "true")
+        .map(m => ({
+          id: m.id,
+          name: m.name,
+          description: m.description,
+        })),
     };
   } catch (error) {
     console.error("Error fetching linked entities:", error);

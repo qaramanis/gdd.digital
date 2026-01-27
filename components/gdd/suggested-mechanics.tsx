@@ -11,6 +11,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -20,8 +21,27 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { getMechanicsByGenre, gameMechanics } from "@/lib/data/game-mechanics";
-import { saveGameMechanics, getGameMechanics } from "@/lib/actions/game-actions";
-import { Lightbulb, Plus, Search, Save, Loader2, Check } from "lucide-react";
+import {
+  saveGameMechanics,
+  getGameMechanics,
+  saveCustomMechanic,
+  getCustomMechanics,
+  updateCustomMechanicSelection,
+  deleteCustomMechanic,
+  updateCustomMechanic,
+  CustomMechanic,
+} from "@/lib/actions/game-actions";
+import {
+  Lightbulb,
+  Plus,
+  Search,
+  Save,
+  Loader2,
+  Check,
+  Sparkles,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 
 interface SuggestedMechanicsProps {
@@ -40,10 +60,29 @@ export function SuggestedMechanics({
   const [selectedMechanics, setSelectedMechanics] = useState<string[]>([]);
   const [savedMechanics, setSavedMechanics] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [tempSelectedMechanics, setTempSelectedMechanics] = useState<string[]>([]);
+  const [tempSelectedMechanics, setTempSelectedMechanics] = useState<string[]>(
+    [],
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Custom mechanics state
+  const [customMechanics, setCustomMechanics] = useState<CustomMechanic[]>([]);
+  const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
+  const [customMechanicName, setCustomMechanicName] = useState("");
+  const [customMechanicDescription, setCustomMechanicDescription] =
+    useState("");
+  const [isSavingCustom, setIsSavingCustom] = useState(false);
+
+  // Edit custom mechanics modal state
+  const [isEditCustomModalOpen, setIsEditCustomModalOpen] = useState(false);
+  const [editingMechanics, setEditingMechanics] = useState<CustomMechanic[]>(
+    [],
+  );
+  const [savingMechanicIds, setSavingMechanicIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   // Check if there are unsaved changes
   const hasUnsavedChanges =
@@ -60,11 +99,19 @@ export function SuggestedMechanics({
     async function loadMechanics() {
       setIsLoading(true);
       try {
-        const result = await getGameMechanics(gameId, userId);
-        if (result.success && result.mechanics) {
-          setSelectedMechanics(result.mechanics);
-          setSavedMechanics(result.mechanics);
-          onMechanicsChange?.(result.mechanics);
+        const [mechanicsResult, customResult] = await Promise.all([
+          getGameMechanics(gameId, userId),
+          getCustomMechanics(gameId, userId),
+        ]);
+
+        if (mechanicsResult.success && mechanicsResult.mechanics) {
+          setSelectedMechanics(mechanicsResult.mechanics);
+          setSavedMechanics(mechanicsResult.mechanics);
+          onMechanicsChange?.(mechanicsResult.mechanics);
+        }
+
+        if (customResult.success && customResult.mechanics) {
+          setCustomMechanics(customResult.mechanics);
         }
       } catch (error) {
         console.error("Error loading mechanics:", error);
@@ -91,29 +138,34 @@ export function SuggestedMechanics({
   const handleOpenModal = () => {
     // Initialize temp selection with mechanics already selected from other genres
     const otherGenreMechanicNames = otherGenresMechanics.flatMap((gm) =>
-      gm.categories.flatMap((cat) => cat.mechanics.map((m) => m.name))
+      gm.categories.flatMap((cat) => cat.mechanics.map((m) => m.name)),
     );
     const alreadySelectedFromOther = selectedMechanics.filter((m) =>
-      otherGenreMechanicNames.includes(m)
+      otherGenreMechanicNames.includes(m),
     );
     setTempSelectedMechanics(alreadySelectedFromOther);
     setIsModalOpen(true);
   };
 
-  const handleModalMechanicToggle = (mechanicName: string, checked: boolean) => {
+  const handleModalMechanicToggle = (
+    mechanicName: string,
+    checked: boolean,
+  ) => {
     setTempSelectedMechanics((prev) =>
-      checked ? [...prev, mechanicName] : prev.filter((m) => m !== mechanicName)
+      checked
+        ? [...prev, mechanicName]
+        : prev.filter((m) => m !== mechanicName),
     );
   };
 
   const handleSaveModal = async () => {
     // Get current genre mechanic names
     const currentGenreMechanicNames = genreMechanics.categories.flatMap((cat) =>
-      cat.mechanics.map((m) => m.name)
+      cat.mechanics.map((m) => m.name),
     );
     // Keep selections from current genre and add new selections from other genres
     const currentGenreSelections = selectedMechanics.filter((m) =>
-      currentGenreMechanicNames.includes(m)
+      currentGenreMechanicNames.includes(m),
     );
     const updated = [...currentGenreSelections, ...tempSelectedMechanics];
     setSelectedMechanics(updated);
@@ -163,6 +215,172 @@ export function SuggestedMechanics({
     setSearchQuery("");
   };
 
+  // Custom mechanics handlers
+  const handleOpenCustomModal = () => {
+    setCustomMechanicName("");
+    setCustomMechanicDescription("");
+    setIsCustomModalOpen(true);
+  };
+
+  const handleSaveCustomMechanic = async () => {
+    if (!customMechanicName.trim() || !customMechanicDescription.trim()) {
+      toast.error("Please fill in both name and description");
+      return;
+    }
+
+    setIsSavingCustom(true);
+    try {
+      const result = await saveCustomMechanic(
+        gameId,
+        userId,
+        customMechanicName,
+        customMechanicDescription,
+      );
+
+      if (result.success && result.mechanic) {
+        setCustomMechanics((prev) => [
+          ...prev,
+          result.mechanic as CustomMechanic,
+        ]);
+        toast.success("Custom mechanic added successfully");
+        setIsCustomModalOpen(false);
+        setCustomMechanicName("");
+        setCustomMechanicDescription("");
+      } else {
+        toast.error(result.error || "Failed to add custom mechanic");
+      }
+    } catch (error) {
+      console.error("Error saving custom mechanic:", error);
+      toast.error("Failed to add custom mechanic");
+    } finally {
+      setIsSavingCustom(false);
+    }
+  };
+
+  const handleCustomMechanicToggle = async (
+    mechanicId: string,
+    checked: boolean,
+  ) => {
+    // Optimistically update the UI
+    setCustomMechanics((prev) =>
+      prev.map((m) =>
+        m.id === mechanicId ? { ...m, isSelected: checked } : m,
+      ),
+    );
+
+    try {
+      const result = await updateCustomMechanicSelection(
+        gameId,
+        userId,
+        mechanicId,
+        checked,
+      );
+      if (!result.success) {
+        // Revert on failure
+        setCustomMechanics((prev) =>
+          prev.map((m) =>
+            m.id === mechanicId ? { ...m, isSelected: !checked } : m,
+          ),
+        );
+        toast.error(result.error || "Failed to update mechanic");
+      }
+    } catch (error) {
+      console.error("Error toggling custom mechanic:", error);
+      setCustomMechanics((prev) =>
+        prev.map((m) =>
+          m.id === mechanicId ? { ...m, isSelected: !checked } : m,
+        ),
+      );
+      toast.error("Failed to update mechanic");
+    }
+  };
+
+  const handleDeleteCustomMechanic = async (mechanicId: string) => {
+    const mechanicToDelete = customMechanics.find((m) => m.id === mechanicId);
+
+    // Optimistically remove from UI
+    setCustomMechanics((prev) => prev.filter((m) => m.id !== mechanicId));
+    setEditingMechanics((prev) => prev.filter((m) => m.id !== mechanicId));
+
+    try {
+      const result = await deleteCustomMechanic(gameId, userId, mechanicId);
+      if (!result.success) {
+        // Revert on failure
+        if (mechanicToDelete) {
+          setCustomMechanics((prev) => [...prev, mechanicToDelete]);
+          setEditingMechanics((prev) => [...prev, mechanicToDelete]);
+        }
+        toast.error(result.error || "Failed to delete mechanic");
+      } else {
+        toast.success("Custom mechanic removed");
+      }
+    } catch (error) {
+      console.error("Error deleting custom mechanic:", error);
+      if (mechanicToDelete) {
+        setCustomMechanics((prev) => [...prev, mechanicToDelete]);
+        setEditingMechanics((prev) => [...prev, mechanicToDelete]);
+      }
+      toast.error("Failed to delete mechanic");
+    }
+  };
+
+  // Edit modal handlers
+  const handleOpenEditModal = () => {
+    setEditingMechanics([...customMechanics]);
+    setIsEditCustomModalOpen(true);
+  };
+
+  const handleEditMechanicChange = (
+    mechanicId: string,
+    field: "name" | "description",
+    value: string,
+  ) => {
+    setEditingMechanics((prev) =>
+      prev.map((m) => (m.id === mechanicId ? { ...m, [field]: value } : m)),
+    );
+  };
+
+  const handleSaveEditedMechanic = async (mechanicId: string) => {
+    const mechanic = editingMechanics.find((m) => m.id === mechanicId);
+    if (!mechanic || !mechanic.name.trim() || !mechanic.description.trim()) {
+      toast.error("Name and description are required");
+      return;
+    }
+
+    setSavingMechanicIds((prev) => new Set([...prev, mechanicId]));
+    try {
+      const result = await updateCustomMechanic(gameId, userId, mechanicId, {
+        name: mechanic.name,
+        description: mechanic.description,
+      });
+
+      if (result.success && result.mechanic) {
+        setCustomMechanics((prev) =>
+          prev.map((m) =>
+            m.id === mechanicId ? (result.mechanic as CustomMechanic) : m,
+          ),
+        );
+        toast.success("Mechanic updated");
+      } else {
+        toast.error(result.error || "Failed to update mechanic");
+      }
+    } catch (error) {
+      console.error("Error updating custom mechanic:", error);
+      toast.error("Failed to update mechanic");
+    } finally {
+      setSavingMechanicIds((prev) => {
+        const next = new Set(prev);
+        next.delete(mechanicId);
+        return next;
+      });
+    }
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditCustomModalOpen(false);
+    setEditingMechanics([]);
+  };
+
   // Filter mechanics based on search query
   const filteredGenresMechanics = otherGenresMechanics
     .map((genreData) => ({
@@ -173,7 +391,9 @@ export function SuggestedMechanics({
           mechanics: category.mechanics.filter(
             (mechanic) =>
               mechanic.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              mechanic.description.toLowerCase().includes(searchQuery.toLowerCase())
+              mechanic.description
+                .toLowerCase()
+                .includes(searchQuery.toLowerCase()),
           ),
         }))
         .filter((category) => category.mechanics.length > 0),
@@ -203,7 +423,8 @@ export function SuggestedMechanics({
         <div className="flex items-center gap-2 mb-4">
           <Lightbulb className="h-4 w-4 text-secondary" />
           <h3 className="font-medium">
-            Suggested Mechanics for {formatGenreName(genreMechanics.genre)} Games
+            Suggested Mechanics for {formatGenreName(genreMechanics.genre)}{" "}
+            Games
           </h3>
         </div>
         <p className="text-base text-accent mb-4">
@@ -214,7 +435,7 @@ export function SuggestedMechanics({
           <div className="space-y-4">
             {genreMechanics.categories.map((category) => (
               <div key={category.category}>
-                <h4 className="font-medium text-muted-foreground mb-2">
+                <h4 className="font-medium text-foreground mb-2">
                   {category.category}
                 </h4>
                 <div className="flex flex-wrap gap-4">
@@ -226,7 +447,10 @@ export function SuggestedMechanics({
                             id={mechanic.name}
                             checked={selectedMechanics.includes(mechanic.name)}
                             onCheckedChange={(checked) =>
-                              handleMechanicToggle(mechanic.name, checked === true)
+                              handleMechanicToggle(
+                                mechanic.name,
+                                checked === true,
+                              )
                             }
                           />
                           <Label
@@ -248,11 +472,65 @@ export function SuggestedMechanics({
           </div>
         </TooltipProvider>
 
+        {/* Custom Mechanics Section */}
+        {customMechanics.length > 0 && (
+          <TooltipProvider>
+            <div className="mt-4 pt-4 border-t">
+              <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
+                Custom Mechanics
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleOpenEditModal}
+                  className="h-6 w-6 p-0"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              </h4>
+              <div className="flex flex-wrap gap-4">
+                {customMechanics.map((mechanic) => (
+                  <Tooltip key={mechanic.id}>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`custom-${mechanic.id}`}
+                          checked={mechanic.isSelected}
+                          onCheckedChange={(checked) =>
+                            handleCustomMechanicToggle(
+                              mechanic.id,
+                              checked === true,
+                            )
+                          }
+                        />
+                        <Label
+                          htmlFor={`custom-${mechanic.id}`}
+                          className={`text-sm cursor-pointer ${mechanic.isSelected ? "text-foreground" : "text-accent"}`}
+                        >
+                          {mechanic.name}
+                        </Label>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p>{mechanic.description}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+              </div>
+            </div>
+          </TooltipProvider>
+        )}
+
         <div className="mt-4 pt-4 border-t flex justify-between items-center">
-          <Button variant="ghost" size="sm" onClick={handleOpenModal}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add from other genres
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={handleOpenCustomModal}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Custom Mechanics
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleOpenModal}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add from other genres
+            </Button>
+          </div>
           <Button
             size="sm"
             onClick={handleSave}
@@ -284,7 +562,8 @@ export function SuggestedMechanics({
           <DialogHeader>
             <DialogTitle>Add Mechanics from Other Genres</DialogTitle>
             <DialogDescription>
-              Select additional mechanics from other game genres to add to your game.
+              Select additional mechanics from other game genres to add to your
+              game.
             </DialogDescription>
           </DialogHeader>
 
@@ -307,22 +586,29 @@ export function SuggestedMechanics({
                       {formatGenreName(genreData.genre)}
                     </h3>
                     {genreData.categories.map((category) => (
-                      <div key={`${genreData.genre}-${category.category}`} className="ml-2">
+                      <div
+                        key={`${genreData.genre}-${category.category}`}
+                        className="ml-2"
+                      >
                         <h4 className="font-medium text-muted-foreground mb-2">
                           {category.category}
                         </h4>
                         <div className="flex flex-wrap gap-3">
                           {category.mechanics.map((mechanic) => (
-                            <Tooltip key={`${genreData.genre}-${mechanic.name}`}>
+                            <Tooltip
+                              key={`${genreData.genre}-${mechanic.name}`}
+                            >
                               <TooltipTrigger asChild>
                                 <div className="flex items-center space-x-2">
                                   <Checkbox
                                     id={`modal-${genreData.genre}-${mechanic.name}`}
-                                    checked={tempSelectedMechanics.includes(mechanic.name)}
+                                    checked={tempSelectedMechanics.includes(
+                                      mechanic.name,
+                                    )}
                                     onCheckedChange={(checked) =>
                                       handleModalMechanicToggle(
                                         mechanic.name,
-                                        checked === true
+                                        checked === true,
                                       )
                                     }
                                   />
@@ -371,6 +657,185 @@ export function SuggestedMechanics({
                 )}
               </Button>
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Custom Mechanic Dialog */}
+      <Dialog open={isCustomModalOpen} onOpenChange={setIsCustomModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Custom Mechanic</DialogTitle>
+            <DialogDescription>
+              Create a custom mechanic specific to your game. This will only be
+              visible for this game.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="custom-mechanic-name">Name</Label>
+              <Input
+                id="custom-mechanic-name"
+                placeholder="e.g., Time Rewind"
+                value={customMechanicName}
+                onChange={(e) => setCustomMechanicName(e.target.value)}
+                maxLength={50}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="custom-mechanic-description">Description</Label>
+              <Textarea
+                id="custom-mechanic-description"
+                placeholder="Briefly describe what this mechanic does..."
+                value={customMechanicDescription}
+                onChange={(e) => setCustomMechanicDescription(e.target.value)}
+                rows={3}
+                maxLength={200}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCustomModalOpen(false)}
+              disabled={isSavingCustom}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveCustomMechanic}
+              disabled={
+                isSavingCustom ||
+                !customMechanicName.trim() ||
+                !customMechanicDescription.trim()
+              }
+            >
+              {isSavingCustom ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                "Add Mechanic"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Custom Mechanics Modal */}
+      <Dialog
+        open={isEditCustomModalOpen}
+        onOpenChange={setIsEditCustomModalOpen}
+      >
+        <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Edit Custom Mechanics</DialogTitle>
+            <DialogDescription>
+              Edit or delete your custom mechanics. Changes are saved
+              individually.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto space-y-4 py-4">
+            {editingMechanics.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                No custom mechanics to edit.
+              </p>
+            ) : (
+              editingMechanics.map((mechanic) => (
+                <div
+                  key={mechanic.id}
+                  className="border rounded-lg p-4 space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 space-y-3">
+                      <div className="space-y-1">
+                        <Label
+                          htmlFor={`edit-name-${mechanic.id}`}
+                          className="text-xs"
+                        >
+                          Name
+                        </Label>
+                        <Input
+                          id={`edit-name-${mechanic.id}`}
+                          value={mechanic.name}
+                          onChange={(e) =>
+                            handleEditMechanicChange(
+                              mechanic.id,
+                              "name",
+                              e.target.value,
+                            )
+                          }
+                          maxLength={50}
+                          disabled={savingMechanicIds.has(mechanic.id)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label
+                          htmlFor={`edit-desc-${mechanic.id}`}
+                          className="text-xs"
+                        >
+                          Description
+                        </Label>
+                        <Textarea
+                          id={`edit-desc-${mechanic.id}`}
+                          value={mechanic.description}
+                          onChange={(e) =>
+                            handleEditMechanicChange(
+                              mechanic.id,
+                              "description",
+                              e.target.value,
+                            )
+                          }
+                          rows={2}
+                          maxLength={200}
+                          disabled={savingMechanicIds.has(mechanic.id)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-end items-center gap-2 pt-2 border-t">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteCustomMechanic(mechanic.id)}
+                      disabled={savingMechanicIds.has(mechanic.id)}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Delete
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => handleSaveEditedMechanic(mechanic.id)}
+                      disabled={
+                        savingMechanicIds.has(mechanic.id) ||
+                        !mechanic.name.trim() ||
+                        !mechanic.description.trim()
+                      }
+                    >
+                      {savingMechanicIds.has(mechanic.id) ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        "Save"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseEditModal}>
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

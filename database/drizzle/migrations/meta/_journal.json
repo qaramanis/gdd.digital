@@ -15,6 +15,20 @@
       "when": 1769027666265,
       "tag": "0001_past_doctor_octopus",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769540575484,
+      "tag": "0002_typical_bulldozer",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1769541225894,
+      "tag": "0003_huge_rhino",
+      "breakpoints": true
     }
   ]
 }

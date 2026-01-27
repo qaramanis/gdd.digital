@@ -153,6 +153,7 @@ export const gameAudioAssets = pgTable("game_audio_assets", {
   description: text("description"),
   linkedCharacters: jsonb("linked_characters").$type<string[]>().default([]),
   linkedScenes: jsonb("linked_scenes").$type<string[]>().default([]),
+  linkedMechanics: jsonb("linked_mechanics").$type<string[]>().default([]),
   storageType: text("storage_type").default("supabase"),
   audioUrl: text("audio_url"),
   bucketPath: text("bucket_path"),

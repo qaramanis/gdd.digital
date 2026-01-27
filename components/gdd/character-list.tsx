@@ -40,8 +40,10 @@ import {
   uploadCharacterModel,
   type Character,
 } from "@/lib/actions/character-actions";
-import { getGameMechanics } from "@/lib/actions/game-actions";
+import { getGameMechanics, getCustomMechanics, type CustomMechanic } from "@/lib/actions/game-actions";
 import { toast } from "sonner";
+import { Sparkles } from "lucide-react";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Tooltip,
@@ -80,6 +82,7 @@ export function CharacterList({
   const [mechanicsModalOpen, setMechanicsModalOpen] = useState(false);
   const [mechanicsCharacter, setMechanicsCharacter] = useState<Character | null>(null);
   const [mechanicsOptions, setMechanicsOptions] = useState<string[]>([]);
+  const [customMechanicsOptions, setCustomMechanicsOptions] = useState<CustomMechanic[]>([]);
   const [selectedMechanics, setSelectedMechanics] = useState<string[]>([]);
   const [isLoadingMechanics, setIsLoadingMechanics] = useState(false);
   const [isSavingMechanics, setIsSavingMechanics] = useState(false);
@@ -152,14 +155,23 @@ export function CharacterList({
     setSelectedMechanics(character.mechanics || []);
     setMechanicsModalOpen(true);
 
-    // Fetch available mechanics for this game
+    // Fetch available mechanics for this game (both regular and custom)
     setIsLoadingMechanics(true);
     try {
-      const result = await getGameMechanics(gameId, userId);
-      if (result.success) {
-        setMechanicsOptions(result.mechanics);
+      const [mechanicsResult, customResult] = await Promise.all([
+        getGameMechanics(gameId, userId),
+        getCustomMechanics(gameId, userId),
+      ]);
+
+      if (mechanicsResult.success) {
+        setMechanicsOptions(mechanicsResult.mechanics);
       } else {
-        toast.error(result.error || "Failed to load mechanics");
+        toast.error(mechanicsResult.error || "Failed to load mechanics");
+      }
+
+      if (customResult.success) {
+        // Only show selected custom mechanics
+        setCustomMechanicsOptions(customResult.mechanics.filter(m => m.isSelected));
       }
     } catch (error) {
       console.error("Error loading mechanics:", error);
@@ -611,7 +623,7 @@ export function CharacterList({
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-            ) : mechanicsOptions.length === 0 ? (
+            ) : mechanicsOptions.length === 0 && customMechanicsOptions.length === 0 ? (
               <div className="text-center py-8">
                 <Link2 className="mx-auto h-10 w-10 text-muted-foreground/50 mb-3" />
                 <p className="text-sm text-muted-foreground">
@@ -622,21 +634,56 @@ export function CharacterList({
                 </p>
               </div>
             ) : (
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {mechanicsOptions.map((mechanic) => (
-                  <label
-                    key={mechanic}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer"
-                  >
-                    <Checkbox
-                      checked={selectedMechanics.includes(mechanic)}
-                      onCheckedChange={() => handleToggleMechanic(mechanic)}
-                      disabled={isSavingMechanics}
-                    />
-                    <span className="text-sm">{mechanic}</span>
-                  </label>
-                ))}
-              </div>
+              <TooltipProvider>
+                <div className="space-y-4 max-h-64 overflow-y-auto">
+                  {/* Regular Mechanics */}
+                  {mechanicsOptions.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-muted-foreground">Game Mechanics</h4>
+                      {mechanicsOptions.map((mechanic) => (
+                        <label
+                          key={mechanic}
+                          className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={selectedMechanics.includes(mechanic)}
+                            onCheckedChange={() => handleToggleMechanic(mechanic)}
+                            disabled={isSavingMechanics}
+                          />
+                          <span className="text-sm">{mechanic}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Custom Mechanics */}
+                  {customMechanicsOptions.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Sparkles className="h-3 w-3" />
+                        Custom Mechanics
+                      </h4>
+                      {customMechanicsOptions.map((mechanic) => (
+                        <Tooltip key={mechanic.id}>
+                          <TooltipTrigger asChild>
+                            <label className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer">
+                              <Checkbox
+                                checked={selectedMechanics.includes(mechanic.name)}
+                                onCheckedChange={() => handleToggleMechanic(mechanic.name)}
+                                disabled={isSavingMechanics}
+                              />
+                              <span className="text-sm">{mechanic.name}</span>
+                            </label>
+                          </TooltipTrigger>
+                          <TooltipContent side="right">
+                            <p>{mechanic.description}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </TooltipProvider>
             )}
             {mechanicsOptions.length > 0 && selectedMechanics.length > 0 && (
               <div className="mt-4 pt-4 border-t">
@@ -669,7 +716,7 @@ export function CharacterList({
             </Button>
             <Button
               onClick={handleSaveMechanics}
-              disabled={isSavingMechanics || mechanicsOptions.length === 0}
+              disabled={isSavingMechanics || (mechanicsOptions.length === 0 && customMechanicsOptions.length === 0)}
             >
               {isSavingMechanics ? (
                 <>

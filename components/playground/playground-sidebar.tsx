@@ -21,6 +21,7 @@ import {
   Trash2,
   Edit,
   User,
+  Music,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -34,6 +35,10 @@ import {
   uploadCharacterModel,
   type Character,
 } from "@/lib/actions/character-actions";
+import {
+  getAudioAssetsByGame,
+  type AudioAsset,
+} from "@/lib/actions/audio-asset-actions";
 import { toast } from "sonner";
 import { EditCharacterModal } from "./edit-character-modal";
 
@@ -43,8 +48,10 @@ interface PlaygroundSidebarProps {
   userId: string | null;
   selectedSceneId: string | null;
   selectedCharacterId: string | null;
+  selectedAudioAssetId: string | null;
   onSceneSelect: (scene: Scene | null) => void;
   onCharacterSelect: (character: Character | null) => void;
+  onAudioAssetSelect: (audioAsset: AudioAsset | null) => void;
   onSceneDelete?: () => void;
   refreshKey?: number;
   initialSceneId?: string | null;
@@ -78,8 +85,10 @@ export function PlaygroundSidebar({
   userId,
   selectedSceneId,
   selectedCharacterId,
+  selectedAudioAssetId,
   onSceneSelect,
   onCharacterSelect,
+  onAudioAssetSelect,
   onSceneDelete,
   refreshKey,
   initialSceneId,
@@ -87,8 +96,10 @@ export function PlaygroundSidebar({
 }: PlaygroundSidebarProps) {
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [audioAssets, setAudioAssets] = useState<AudioAsset[]>([]);
   const [loadingScenes, setLoadingScenes] = useState(false);
   const [loadingCharacters, setLoadingCharacters] = useState(false);
+  const [loadingAudioAssets, setLoadingAudioAssets] = useState(false);
   const [hasAutoSelectedScene, setHasAutoSelectedScene] = useState(false);
   const [hasAutoSelectedCharacter, setHasAutoSelectedCharacter] =
     useState(false);
@@ -311,6 +322,38 @@ export function PlaygroundSidebar({
     };
   }, [gameId, userId, refreshKey]);
 
+  // Load audio assets
+  useEffect(() => {
+    if (!gameId || !userId) {
+      setAudioAssets([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadAudioAssets = async () => {
+      setLoadingAudioAssets(true);
+      const result = await getAudioAssetsByGame(gameId, userId);
+
+      if (cancelled) return;
+
+      if (result.success) {
+        // Only show audio assets that have an audio URL
+        setAudioAssets(
+          (result.audioAssets as AudioAsset[]).filter((a) => a.audioUrl)
+        );
+      }
+
+      setLoadingAudioAssets(false);
+    };
+
+    loadAudioAssets();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [gameId, userId, refreshKey]);
+
   // Auto-select scene from URL params
   useEffect(() => {
     if (
@@ -369,10 +412,10 @@ export function PlaygroundSidebar({
     );
   }
 
-  const isLoading = loadingScenes || loadingCharacters;
+  const isLoading = loadingScenes || loadingCharacters || loadingAudioAssets;
 
   // Loading state
-  if (isLoading && scenes.length === 0 && characters.length === 0) {
+  if (isLoading && scenes.length === 0 && characters.length === 0 && audioAssets.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -605,6 +648,67 @@ export function PlaygroundSidebar({
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Audio Assets Section */}
+        <div className="border-t">
+          <div className="p-3 pb-2">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              <Music className="h-3.5 w-3.5" />
+              Audio Assets
+              <span className="ml-auto text-[10px] font-normal normal-case">
+                {audioAssets.length}
+              </span>
+            </div>
+          </div>
+
+          {loadingAudioAssets ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          ) : audioAssets.length === 0 ? (
+            <div className="px-3 pb-3">
+              <p className="text-xs text-muted-foreground text-center py-4">
+                No audio assets available
+              </p>
+            </div>
+          ) : (
+            <div className="px-2 pb-2 space-y-1">
+              {audioAssets.map((audioAsset) => (
+                <div
+                  key={audioAsset.id}
+                  className={cn(
+                    "w-full p-2 rounded-lg transition-colors cursor-pointer",
+                    "hover:bg-muted/80",
+                    selectedAudioAssetId === audioAsset.id && "bg-muted",
+                  )}
+                  onClick={() => {
+                    onSceneSelect(null);
+                    onCharacterSelect(null);
+                    onAudioAssetSelect(audioAsset);
+                  }}
+                >
+                  <div className="flex items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {audioAsset.name || audioAsset.filename}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        {audioAsset.fileFormat && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1.5 py-0 bg-pink-500/10 text-pink-600 border-pink-500/20"
+                          >
+                            {audioAsset.fileFormat}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
