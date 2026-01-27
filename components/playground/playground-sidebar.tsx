@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -383,9 +384,11 @@ export function PlaygroundSidebar({
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="p-3 border-b">
-        <h3 className="font-medium text-sm truncate">
-          {gameName || "Loading..."}
-        </h3>
+        <Link href={`/games/${gameId}`}>
+          <h3 className="font-medium text-sm truncate hover:text-primary transition-colors cursor-pointer">
+            {gameName || "Loading..."}
+          </h3>
+        </Link>
       </div>
 
       {/* Scrollable content */}

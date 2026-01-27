@@ -13,6 +13,7 @@ import {
   CheckCircle,
   BookOpen,
   User,
+  Music,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -392,6 +393,15 @@ export default function GameDetailView({
               >
                 <User className="h-4 w-4 mr-2" />
                 View Characters
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => router.push(`/games/${game.id}/audio-assets`)}
+              >
+                <Music className="h-4 w-4 mr-2" />
+                View Audio Assets
               </Button>
             </CardContent>
           </Card>

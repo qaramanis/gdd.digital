@@ -139,3 +139,38 @@ export const notesRelations = relations(notes, ({ one }) => ({
     references: [user.id],
   }),
 }));
+
+export const gameAudioAssets = pgTable("game_audio_assets", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  gameId: uuid("game_id")
+    .notNull()
+    .references(() => games.id, { onDelete: "cascade" }),
+  createdBy: text("created_by")
+    .notNull()
+    .references(() => user.id),
+  name: text("name"),
+  filename: text("filename").notNull(),
+  description: text("description"),
+  linkedCharacters: jsonb("linked_characters").$type<string[]>().default([]),
+  linkedScenes: jsonb("linked_scenes").$type<string[]>().default([]),
+  storageType: text("storage_type").default("supabase"),
+  audioUrl: text("audio_url"),
+  bucketPath: text("bucket_path"),
+  fileSize: integer("file_size"),
+  fileFormat: text("file_format"),
+  duration: integer("duration"),
+  audioData: jsonb("audio_data"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const gameAudioAssetsRelations = relations(gameAudioAssets, ({ one }) => ({
+  game: one(games, {
+    fields: [gameAudioAssets.gameId],
+    references: [games.id],
+  }),
+  creator: one(user, {
+    fields: [gameAudioAssets.createdBy],
+    references: [user.id],
+  }),
+}));

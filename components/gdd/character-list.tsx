@@ -346,14 +346,16 @@ export function CharacterList({
       ) : (
         <div className="space-y-2">
           {characters.slice(0, 3).map((character) => (
-            <div key={character.id} className="flex items-center gap-2 group">
-              <span className="font-medium text-sm w-32 truncate">
-                {character.name}
-              </span>
-              <span className="text-sm text-accent flex-1 truncate">
-                {character.description || "No description"}
-              </span>
-              <div className="flex items-center gap-1">
+            <div key={character.id} className="flex items-center justify-between gap-2 group">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="font-medium text-sm w-32 truncate shrink-0">
+                  {character.name}
+                </span>
+                <span className="text-sm text-accent truncate max-w-lg">
+                  {character.description || "No description"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button

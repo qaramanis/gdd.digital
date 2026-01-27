@@ -43,6 +43,7 @@ import {
   ChevronRight,
   Box,
   X,
+  Filter,
 } from "lucide-react";
 import {
   getPaginatedCharacters,
@@ -340,7 +341,7 @@ export function CharacterListPage({ gameId, userId }: CharacterListPageProps) {
           )}
         </div>
         <Select value={modelFilter} onValueChange={setModelFilter}>
-          <SelectTrigger className="w-full sm:w-48">
+          <SelectTrigger className="w-full sm:w-48" icon={<Filter className="size-4 opacity-50" />}>
             <SelectValue placeholder="Filter by model" />
           </SelectTrigger>
           <SelectContent>
@@ -450,59 +451,56 @@ export function CharacterListPage({ gameId, userId }: CharacterListPageProps) {
           {characters.map((character) => (
             <Card key={character.id} className="group">
               <CardContent className="">
-                <div className="flex items-center gap-4">
-                  {/* Character Icon */}
-                  {/*<div className="shrink-0 h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                    <User className="h-5 w-5 text-muted-foreground" />
-                  </div>*/}
-
+                <div className="flex items-center justify-between gap-4">
                   {/* Name and Description */}
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 max-w-xl">
                     <h3 className="font-semibold truncate">{character.name}</h3>
                     <p className="text-sm text-accent truncate">
                       {character.description || "No description"}
                     </p>
                   </div>
 
-                  {/* Model Status */}
-                  <div className="hidden sm:flex items-center gap-2 text-sm shrink-0">
-                    <Box className="h-4 w-4 text-muted-foreground" />
-                    {character.modelUrl ? (
-                      <span className="text-secondary">
-                        3D Model
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">No model</span>
-                    )}
-                  </div>
+                  {/* Right side content */}
+                  <div className="flex items-center gap-4 shrink-0">
+                    {/* Model Status */}
+                    <div className="hidden sm:flex items-center gap-2 text-sm">
+                      <Box className="h-4 w-4 text-muted-foreground" />
+                      {character.modelUrl ? (
+                        <span className="text-secondary">
+                          3D Model
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">No model</span>
+                      )}
+                    </div>
 
-                  {/* Mechanics */}
-                  <div className="hidden md:flex items-center gap-1 shrink-0 max-w-64">
-                    {character.mechanics && character.mechanics.length > 0 ? (
-                      <>
-                        {character.mechanics.slice(0, 2).map((mechanic) => (
-                          <span
-                            key={mechanic}
-                            className="text-xs bg-primary/10 text-primary px-2 py-1 rounded truncate max-w-24"
-                          >
-                            {mechanic}
-                          </span>
-                        ))}
-                        {character.mechanics.length > 2 && (
-                          <span className="text-xs text-muted-foreground">
-                            +{character.mechanics.length - 2}
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        No mechanics
-                      </span>
-                    )}
-                  </div>
+                    {/* Mechanics */}
+                    <div className="hidden md:flex items-center gap-1 max-w-64">
+                      {character.mechanics && character.mechanics.length > 0 ? (
+                        <>
+                          {character.mechanics.slice(0, 2).map((mechanic) => (
+                            <span
+                              key={mechanic}
+                              className="text-xs bg-primary/10 text-primary px-2 py-1 rounded truncate max-w-24"
+                            >
+                              {mechanic}
+                            </span>
+                          ))}
+                          {character.mechanics.length > 2 && (
+                            <span className="text-xs text-muted-foreground">
+                              +{character.mechanics.length - 2}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          No mechanics
+                        </span>
+                      )}
+                    </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 shrink-0">
+                    {/* Actions */}
+                    <div className="flex items-center gap-1">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -566,6 +564,7 @@ export function CharacterListPage({ gameId, userId }: CharacterListPageProps) {
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+                  </div>
                   </div>
                 </div>
               </CardContent>

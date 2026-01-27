@@ -32,6 +32,7 @@ import {
 } from "@/lib/actions/gdd-actions";
 import { Textarea } from "@/components/ui/textarea";
 import { CharacterList } from "@/components/gdd/character-list";
+import { AudioAssetList } from "@/components/gdd/audio-asset-list";
 
 interface GameContext {
   name: string;
@@ -584,6 +585,16 @@ export function SubSectionEditor({
         {subSectionType === "character_environments_models" && (
           <div className="mt-2">
             <CharacterList
+              gameId={gameId}
+              userId={userId}
+            />
+          </div>
+        )}
+
+        {/* Audio asset list for audio_assets subsection */}
+        {subSectionType === "audio_assets" && (
+          <div className="mt-2">
+            <AudioAssetList
               gameId={gameId}
               userId={userId}
             />

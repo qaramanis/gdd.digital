@@ -2,10 +2,20 @@
 
 import { Menu, Quote, X } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useSession } from "@/lib/auth/auth-client";
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { data: session } = useSession();
+  const router = useRouter();
+
+  const handleGetStarted = () => {
+    router.push(session?.user ? "/dashboard" : "/sign-in");
+  };
+
+  const getStartedHref = session?.user ? "/dashboard" : "/sign-in";
 
   return (
     <nav className="fixed top-0 w-full backdrop-blur-xl z-50">
@@ -54,8 +64,11 @@ const Navigation = () => {
 
             {/* CTA Button */}
             <div className="hidden md:block">
-              <button className="h-full bg-gradient-to-r cursor-pointer from-violet-600 to-pink-600 text-white px-6 py-2.5 rounded-full font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-all transform hover:scale-105">
-                <Link href="/sign-in">Get Started</Link>
+              <button
+                onClick={handleGetStarted}
+                className="h-full bg-gradient-to-r cursor-pointer from-violet-600 to-pink-600 text-white px-6 py-2.5 rounded-full font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-all transform hover:scale-105"
+              >
+                Get Started
               </button>
             </div>
           </div>
@@ -103,7 +116,7 @@ const Navigation = () => {
               Docs
             </a>
             <button className="w-full mt-2 bg-gradient-to-r from-violet-600 to-pink-600 text-white px-6 py-2.5 rounded-full">
-              Get Started
+              <Link href={getStartedHref}>Get Started</Link>
             </button>
           </div>
         </div>
