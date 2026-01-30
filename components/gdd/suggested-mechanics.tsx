@@ -44,11 +44,19 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+// Interface for mechanic data exposed to parent for dynamic subsections
+export interface MechanicData {
+  name: string;
+  description: string;
+  isCustom: boolean;
+}
+
 interface SuggestedMechanicsProps {
   genre: string;
   gameId: string;
   userId: string;
   onMechanicsChange?: (selectedMechanics: string[]) => void;
+  onMechanicsDataChange?: (mechanics: MechanicData[]) => void;
 }
 
 export function SuggestedMechanics({
@@ -56,6 +64,7 @@ export function SuggestedMechanics({
   gameId,
   userId,
   onMechanicsChange,
+  onMechanicsDataChange,
 }: SuggestedMechanicsProps) {
   const [selectedMechanics, setSelectedMechanics] = useState<string[]>([]);
   const [savedMechanics, setSavedMechanics] = useState<string[]>([]);
@@ -94,6 +103,47 @@ export function SuggestedMechanics({
   // Get mechanics from other genres (excluding current genre)
   const otherGenresMechanics = gameMechanics.filter((gm) => gm.genre !== genre);
 
+  // Helper to get description for a mechanic name from all genres
+  const getMechanicDescription = (mechanicName: string): string => {
+    for (const genre of gameMechanics) {
+      for (const category of genre.categories) {
+        const found = category.mechanics.find((m) => m.name === mechanicName);
+        if (found) return found.description;
+      }
+    }
+    return "";
+  };
+
+  // Build mechanics data for parent component (combines predefined and custom mechanics)
+  const buildMechanicsData = (
+    selected: string[],
+    custom: CustomMechanic[]
+  ): MechanicData[] => {
+    const data: MechanicData[] = [];
+
+    // Add predefined mechanics
+    for (const name of selected) {
+      data.push({
+        name,
+        description: getMechanicDescription(name),
+        isCustom: false,
+      });
+    }
+
+    // Add selected custom mechanics
+    for (const mechanic of custom) {
+      if (mechanic.isSelected) {
+        data.push({
+          name: mechanic.name,
+          description: mechanic.description,
+          isCustom: true,
+        });
+      }
+    }
+
+    return data;
+  };
+
   // Load existing mechanics on mount
   useEffect(() => {
     async function loadMechanics() {
@@ -112,6 +162,15 @@ export function SuggestedMechanics({
 
         if (customResult.success && customResult.mechanics) {
           setCustomMechanics(customResult.mechanics);
+        }
+
+        // Notify parent of full mechanics data for dynamic subsections
+        if (mechanicsResult.success && customResult.success) {
+          const mechanicsData = buildMechanicsData(
+            mechanicsResult.mechanics || [],
+            customResult.mechanics || []
+          );
+          onMechanicsDataChange?.(mechanicsData);
         }
       } catch (error) {
         console.error("Error loading mechanics:", error);
@@ -133,6 +192,7 @@ export function SuggestedMechanics({
 
     setSelectedMechanics(updated);
     onMechanicsChange?.(updated);
+    onMechanicsDataChange?.(buildMechanicsData(updated, customMechanics));
   };
 
   const handleOpenModal = () => {
@@ -170,6 +230,7 @@ export function SuggestedMechanics({
     const updated = [...currentGenreSelections, ...tempSelectedMechanics];
     setSelectedMechanics(updated);
     onMechanicsChange?.(updated);
+    onMechanicsDataChange?.(buildMechanicsData(updated, customMechanics));
 
     // Save to database
     setIsSaving(true);
@@ -238,10 +299,10 @@ export function SuggestedMechanics({
       );
 
       if (result.success && result.mechanic) {
-        setCustomMechanics((prev) => [
-          ...prev,
-          result.mechanic as CustomMechanic,
-        ]);
+        const newMechanic = result.mechanic as CustomMechanic;
+        const updatedCustom = [...customMechanics, newMechanic];
+        setCustomMechanics(updatedCustom);
+        onMechanicsDataChange?.(buildMechanicsData(selectedMechanics, updatedCustom));
         toast.success("Custom mechanic added successfully");
         setIsCustomModalOpen(false);
         setCustomMechanicName("");
@@ -262,11 +323,11 @@ export function SuggestedMechanics({
     checked: boolean,
   ) => {
     // Optimistically update the UI
-    setCustomMechanics((prev) =>
-      prev.map((m) =>
-        m.id === mechanicId ? { ...m, isSelected: checked } : m,
-      ),
+    const updatedCustom = customMechanics.map((m) =>
+      m.id === mechanicId ? { ...m, isSelected: checked } : m
     );
+    setCustomMechanics(updatedCustom);
+    onMechanicsDataChange?.(buildMechanicsData(selectedMechanics, updatedCustom));
 
     try {
       const result = await updateCustomMechanicSelection(
@@ -277,20 +338,20 @@ export function SuggestedMechanics({
       );
       if (!result.success) {
         // Revert on failure
-        setCustomMechanics((prev) =>
-          prev.map((m) =>
-            m.id === mechanicId ? { ...m, isSelected: !checked } : m,
-          ),
+        const revertedCustom = customMechanics.map((m) =>
+          m.id === mechanicId ? { ...m, isSelected: !checked } : m
         );
+        setCustomMechanics(revertedCustom);
+        onMechanicsDataChange?.(buildMechanicsData(selectedMechanics, revertedCustom));
         toast.error(result.error || "Failed to update mechanic");
       }
     } catch (error) {
       console.error("Error toggling custom mechanic:", error);
-      setCustomMechanics((prev) =>
-        prev.map((m) =>
-          m.id === mechanicId ? { ...m, isSelected: !checked } : m,
-        ),
+      const revertedCustom = customMechanics.map((m) =>
+        m.id === mechanicId ? { ...m, isSelected: !checked } : m
       );
+      setCustomMechanics(revertedCustom);
+      onMechanicsDataChange?.(buildMechanicsData(selectedMechanics, revertedCustom));
       toast.error("Failed to update mechanic");
     }
   };
@@ -299,16 +360,20 @@ export function SuggestedMechanics({
     const mechanicToDelete = customMechanics.find((m) => m.id === mechanicId);
 
     // Optimistically remove from UI
-    setCustomMechanics((prev) => prev.filter((m) => m.id !== mechanicId));
+    const updatedCustom = customMechanics.filter((m) => m.id !== mechanicId);
+    setCustomMechanics(updatedCustom);
     setEditingMechanics((prev) => prev.filter((m) => m.id !== mechanicId));
+    onMechanicsDataChange?.(buildMechanicsData(selectedMechanics, updatedCustom));
 
     try {
       const result = await deleteCustomMechanic(gameId, userId, mechanicId);
       if (!result.success) {
         // Revert on failure
         if (mechanicToDelete) {
-          setCustomMechanics((prev) => [...prev, mechanicToDelete]);
+          const revertedCustom = [...customMechanics];
+          setCustomMechanics(revertedCustom);
           setEditingMechanics((prev) => [...prev, mechanicToDelete]);
+          onMechanicsDataChange?.(buildMechanicsData(selectedMechanics, revertedCustom));
         }
         toast.error(result.error || "Failed to delete mechanic");
       } else {
@@ -317,8 +382,10 @@ export function SuggestedMechanics({
     } catch (error) {
       console.error("Error deleting custom mechanic:", error);
       if (mechanicToDelete) {
-        setCustomMechanics((prev) => [...prev, mechanicToDelete]);
+        const revertedCustom = [...customMechanics];
+        setCustomMechanics(revertedCustom);
         setEditingMechanics((prev) => [...prev, mechanicToDelete]);
+        onMechanicsDataChange?.(buildMechanicsData(selectedMechanics, revertedCustom));
       }
       toast.error("Failed to delete mechanic");
     }
@@ -355,11 +422,12 @@ export function SuggestedMechanics({
       });
 
       if (result.success && result.mechanic) {
-        setCustomMechanics((prev) =>
-          prev.map((m) =>
-            m.id === mechanicId ? (result.mechanic as CustomMechanic) : m,
-          ),
+        const updatedMechanic = result.mechanic as CustomMechanic;
+        const updatedCustom = customMechanics.map((m) =>
+          m.id === mechanicId ? updatedMechanic : m
         );
+        setCustomMechanics(updatedCustom);
+        onMechanicsDataChange?.(buildMechanicsData(selectedMechanics, updatedCustom));
         toast.success("Mechanic updated");
       } else {
         toast.error(result.error || "Failed to update mechanic");
@@ -524,7 +592,7 @@ export function SuggestedMechanics({
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" onClick={handleOpenCustomModal}>
               <Plus className="h-4 w-4 mr-2" />
-              Add Custom Mechanics
+              Add Custom
             </Button>
             <Button variant="ghost" size="sm" onClick={handleOpenModal}>
               <Plus className="h-4 w-4 mr-2" />

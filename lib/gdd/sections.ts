@@ -184,61 +184,63 @@ export const GDD_SECTIONS: GDDSection[] = [
       "Document the core gameplay systems, controls, progression, and interactive elements that define player experience.",
     subSections: [
       {
-        id: "core_mechanics",
-        title: "Core Mechanics",
+        id: "general_mechanics",
+        title: "General Mechanics",
         placeholder:
-          "Describe the fundamental gameplay mechanics - the primary actions and systems players interact with...",
+          "Describe the fundamental gameplay mechanics - the primary actions, systems, and gameplay loop that players interact with...",
         instructions: `Define the core mechanics in 2-3 paragraphs. Cover: 1) The primary cycle of actions players repeat (the gameplay loop), 2) The fundamental systems that drive moment-to-moment gameplay, 3) How these mechanics work together to create the core experience, 4) What makes these mechanics satisfying and engaging, 5) How mechanics support the game's core concept. This should clearly show what players spend most of their time doing.`,
       },
-      {
-        id: "controls",
-        title: "Controls",
-        placeholder:
-          "Define the control schemes - how players physically interact with the game across different platforms...",
-        instructions: `Describe controls in 2 paragraphs. Cover: 1) Primary control scheme for the main platform (button mappings, inputs), 2) Key actions and how they're performed, 3) Any unique or innovative control mechanics, 4) How controls differ across platforms (controller, keyboard/mouse, touch), 5) Control customization and accessibility options. Be specific about interaction patterns and responsiveness.`,
-      },
-      {
-        id: "progression_systems",
-        title: "Progression Systems",
-        placeholder:
-          "Explain how players grow and advance - leveling, unlocks, skill trees, upgrades...",
-        instructions: `Detail progression systems in 2 paragraphs. Cover: 1) Character or player progression (levels, experience, stats), 2) Unlock systems (abilities, items, content), 3) Skill trees or upgrade paths, 4) Resource acquisition and spending, 5) How progression pacing maintains engagement. Show how players feel a sense of growth and advancement over time.`,
-      },
-      {
-        id: "challenge_design",
-        title: "Challenge Design",
-        placeholder:
-          "Describe how challenges are structured - difficulty curves, obstacles, skill tests, and learning...",
-        instructions: `Describe challenge design in 2 paragraphs. Cover: 1) Types of challenges players face (combat, puzzles, skill tests), 2) How difficulty scales and progresses, 3) The learning curve and how players develop mastery, 4) Optional vs. required challenges, 5) How failure is handled and what players learn from it. Show how challenges create engagement without frustration.`,
-      },
-      {
-        id: "balancing",
-        title: "Balancing",
-        placeholder:
-          "Explain the approach to game balance - difficulty options, power curves, fair play...",
-        instructions: `Describe balancing approach in 2 paragraphs. Cover: 1) Difficulty options and how they affect gameplay, 2) Power curves and how player strength scales, 3) Economy balance (resources, rewards, costs), 4) Competitive balance (if multiplayer), 5) Philosophy on player fairness and challenge. Address how the game remains engaging for different skill levels.`,
-      },
-      {
-        id: "feedback_and_response",
-        title: "Feedback and Response",
-        placeholder:
-          "Describe how the game communicates with players - visual, audio, and haptic feedback systems...",
-        instructions: `Detail feedback systems in 2 paragraphs. Cover: 1) Visual feedback (animations, effects, UI responses), 2) Audio feedback (sound effects, music changes), 3) Haptic feedback (controller rumble, if applicable), 4) How feedback reinforces successful actions, 5) How feedback communicates failure or danger. Show how the game creates satisfying, responsive interactions.`,
-      },
-      {
-        id: "emergent_gameplay",
-        title: "Emergent Gameplay",
-        placeholder:
-          "Describe unscripted gameplay possibilities - system interactions, player creativity, unexpected strategies...",
-        instructions: `Describe emergent gameplay in 2 paragraphs. Cover: 1) How game systems interact to create unplanned scenarios, 2) Opportunities for player creativity and experimentation, 3) Unexpected strategies or solutions the mechanics allow, 4) Sandbox elements or systemic interactions, 5) How emergence enhances replayability. Show how players can surprise themselves through play.`,
-      },
-      {
-        id: "game_modes",
-        title: "Game Modes",
-        placeholder:
-          "List and describe available game modes - campaign, multiplayer, challenges, custom modes...",
-        instructions: `Describe game modes in 2 paragraphs. Cover: 1) Primary game mode (campaign, endless, etc.), 2) Additional modes (multiplayer, challenge modes, endless), 3) What makes each mode distinct, 4) How modes cater to different play styles, 5) Unlockable or post-game modes. Show the variety of ways players can experience the game.`,
-      },
+      // Dynamic subsections are rendered based on selected mechanics from the SuggestedMechanics component
+      // The following subsections are commented out as they are now replaced by dynamic mechanic-based subsections:
+      // {
+      //   id: "controls",
+      //   title: "Controls",
+      //   placeholder:
+      //     "Define the control schemes - how players physically interact with the game across different platforms...",
+      //   instructions: `Describe controls in 2 paragraphs. Cover: 1) Primary control scheme for the main platform (button mappings, inputs), 2) Key actions and how they're performed, 3) Any unique or innovative control mechanics, 4) How controls differ across platforms (controller, keyboard/mouse, touch), 5) Control customization and accessibility options. Be specific about interaction patterns and responsiveness.`,
+      // },
+      // {
+      //   id: "progression_systems",
+      //   title: "Progression Systems",
+      //   placeholder:
+      //     "Explain how players grow and advance - leveling, unlocks, skill trees, upgrades...",
+      //   instructions: `Detail progression systems in 2 paragraphs. Cover: 1) Character or player progression (levels, experience, stats), 2) Unlock systems (abilities, items, content), 3) Skill trees or upgrade paths, 4) Resource acquisition and spending, 5) How progression pacing maintains engagement. Show how players feel a sense of growth and advancement over time.`,
+      // },
+      // {
+      //   id: "challenge_design",
+      //   title: "Challenge Design",
+      //   placeholder:
+      //     "Describe how challenges are structured - difficulty curves, obstacles, skill tests, and learning...",
+      //   instructions: `Describe challenge design in 2 paragraphs. Cover: 1) Types of challenges players face (combat, puzzles, skill tests), 2) How difficulty scales and progresses, 3) The learning curve and how players develop mastery, 4) Optional vs. required challenges, 5) How failure is handled and what players learn from it. Show how challenges create engagement without frustration.`,
+      // },
+      // {
+      //   id: "balancing",
+      //   title: "Balancing",
+      //   placeholder:
+      //     "Explain the approach to game balance - difficulty options, power curves, fair play...",
+      //   instructions: `Describe balancing approach in 2 paragraphs. Cover: 1) Difficulty options and how they affect gameplay, 2) Power curves and how player strength scales, 3) Economy balance (resources, rewards, costs), 4) Competitive balance (if multiplayer), 5) Philosophy on player fairness and challenge. Address how the game remains engaging for different skill levels.`,
+      // },
+      // {
+      //   id: "feedback_and_response",
+      //   title: "Feedback and Response",
+      //   placeholder:
+      //     "Describe how the game communicates with players - visual, audio, and haptic feedback systems...",
+      //   instructions: `Detail feedback systems in 2 paragraphs. Cover: 1) Visual feedback (animations, effects, UI responses), 2) Audio feedback (sound effects, music changes), 3) Haptic feedback (controller rumble, if applicable), 4) How feedback reinforces successful actions, 5) How feedback communicates failure or danger. Show how the game creates satisfying, responsive interactions.`,
+      // },
+      // {
+      //   id: "emergent_gameplay",
+      //   title: "Emergent Gameplay",
+      //   placeholder:
+      //     "Describe unscripted gameplay possibilities - system interactions, player creativity, unexpected strategies...",
+      //   instructions: `Describe emergent gameplay in 2 paragraphs. Cover: 1) How game systems interact to create unplanned scenarios, 2) Opportunities for player creativity and experimentation, 3) Unexpected strategies or solutions the mechanics allow, 4) Sandbox elements or systemic interactions, 5) How emergence enhances replayability. Show how players can surprise themselves through play.`,
+      // },
+      // {
+      //   id: "game_modes",
+      //   title: "Game Modes",
+      //   placeholder:
+      //     "List and describe available game modes - campaign, multiplayer, challenges, custom modes...",
+      //   instructions: `Describe game modes in 2 paragraphs. Cover: 1) Primary game mode (campaign, endless, etc.), 2) Additional modes (multiplayer, challenge modes, endless), 3) What makes each mode distinct, 4) How modes cater to different play styles, 5) Unlockable or post-game modes. Show the variety of ways players can experience the game.`,
+      // },
     ],
   },
   {

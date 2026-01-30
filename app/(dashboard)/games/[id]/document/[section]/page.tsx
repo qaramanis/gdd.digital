@@ -30,7 +30,10 @@ import { useUser } from "@/providers/user-context";
 import { SubSectionEditor } from "@/components/gdd/sub-section-editor";
 import { EnhanceButtons } from "@/components/gdd/enhance-buttons";
 import { ModelSelector } from "@/components/gdd/model-selector";
-import { SuggestedMechanics } from "@/components/gdd/suggested-mechanics";
+import {
+  SuggestedMechanics,
+  type MechanicData,
+} from "@/components/gdd/suggested-mechanics";
 import { ArrowLeft, ArrowRight, Save, Loader2, Check } from "lucide-react";
 import type { AIModelId } from "@/database/drizzle/schema/preferences";
 
@@ -65,6 +68,7 @@ export default function GDDSectionPage() {
     useState<AIModelId>("claude-sonnet");
   const [comments, setComments] = useState<Record<string, GDDComment[]>>({});
   const [userRole, setUserRole] = useState<UserRole>("viewer");
+  const [mechanicsData, setMechanicsData] = useState<MechanicData[]>([]);
 
   const contentRef = useRef<GDDSectionContent>({});
   const allSectionsRef = useRef<AllSectionsContent>({});
@@ -192,11 +196,23 @@ export default function GDDSectionPage() {
   // Get all content for enhance buttons
   const getAllContent = useCallback(() => {
     if (!section) return "";
-    return section.subSections
+    const staticContent = section.subSections
       .map((sub) => contentRef.current[sub.id] || "")
-      .filter(Boolean)
-      .join("\n\n");
-  }, [section]);
+      .filter(Boolean);
+
+    // Include dynamic mechanic subsections for gameplay-mechanics
+    const mechanicContent =
+      sectionSlug === "gameplay-mechanics"
+        ? mechanicsData
+            .map((m) => {
+              const mechanicId = `mechanic_${m.name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "")}`;
+              return contentRef.current[mechanicId] || "";
+            })
+            .filter(Boolean)
+        : [];
+
+    return [...staticContent, ...mechanicContent].join("\n\n");
+  }, [section, sectionSlug, mechanicsData]);
 
   // Set all content from enhance buttons
   const setAllContent = useCallback(
@@ -226,11 +242,25 @@ export default function GDDSectionPage() {
   // Build current section subsections for export
   const currentSectionSubSections = useMemo(() => {
     if (!section) return [];
-    return section.subSections.map((sub) => ({
+    const staticSubSections = section.subSections.map((sub) => ({
       title: sub.title,
       content: contentRef.current[sub.id] || "",
     }));
-  }, [section, content]);
+
+    // Include dynamic mechanic subsections for gameplay-mechanics
+    const mechanicSubSections =
+      sectionSlug === "gameplay-mechanics"
+        ? mechanicsData.map((m) => {
+            const mechanicId = `mechanic_${m.name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "")}`;
+            return {
+              title: m.name,
+              content: contentRef.current[mechanicId] || "",
+            };
+          })
+        : [];
+
+    return [...staticSubSections, ...mechanicSubSections];
+  }, [section, content, sectionSlug, mechanicsData]);
 
   // Build available sections for export (excluding current section)
   const availableSectionsForExport = useMemo(() => {
@@ -350,6 +380,7 @@ export default function GDDSectionPage() {
               genre={gameContext.genre}
               gameId={gameId}
               userId={userId}
+              onMechanicsDataChange={setMechanicsData}
             />
           )}
           {section.subSections.map((subSection) => (
@@ -378,6 +409,38 @@ export default function GDDSectionPage() {
               canComment={canComment}
             />
           ))}
+          {/* Dynamic mechanic subsections for gameplay-mechanics section */}
+          {sectionSlug === "gameplay-mechanics" &&
+            mechanicsData.map((mechanic) => {
+              // Create a normalized ID for storage (lowercase, spaces to underscores)
+              const mechanicId = `mechanic_${mechanic.name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "")}`;
+              return (
+                <SubSectionEditor
+                  key={mechanicId}
+                  title={mechanic.name}
+                  placeholder={mechanic.description || `Describe how ${mechanic.name} works in your game...`}
+                  subSectionType={mechanicId}
+                  sectionType={sectionSlug}
+                  gameContext={gameContext}
+                  allContent={allSectionsContent}
+                  initialContent={content[mechanicId] || ""}
+                  onChange={(value) => handleSubSectionChange(mechanicId, value)}
+                  onAcceptGenerated={handleSave}
+                  modelId={selectedModel}
+                  gameId={gameId}
+                  userId={userId}
+                  initialComments={comments[mechanicId] || []}
+                  onCommentsChange={(newComments) => {
+                    setComments((prev) => ({
+                      ...prev,
+                      [mechanicId]: newComments,
+                    }));
+                  }}
+                  canEdit={canEdit}
+                  canComment={canComment}
+                />
+              );
+            })}
         </CardContent>
       </Card>
 
