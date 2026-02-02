@@ -165,4 +165,94 @@ body {
         pointer-events: none;
         height: 0;
     }
+
+    /* Mention styles */
+    .mention {
+        padding: 0.125rem 0.375rem;
+        border-radius: 0.25rem;
+        font-size: 0.8em;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        text-decoration: none;
+    }
+
+    .mention:hover {
+        filter: brightness(0.95);
+    }
+
+    /* Character mentions - Purple */
+    .mention-character {
+        background-color: rgba(147, 51, 234, 0.15);
+        color: rgb(126, 34, 206);
+    }
+
+    .mention-character:hover {
+        background-color: rgba(147, 51, 234, 0.25);
+    }
+
+    /* Scene mentions - Green */
+    .mention-scene {
+        background-color: rgba(34, 197, 94, 0.15);
+        color: rgb(22, 163, 74);
+    }
+
+    .mention-scene:hover {
+        background-color: rgba(34, 197, 94, 0.25);
+    }
+
+    /* Mechanic mentions - Amber */
+    .mention-mechanic {
+        background-color: rgba(245, 158, 11, 0.15);
+        color: rgb(217, 119, 6);
+    }
+
+    .mention-mechanic:hover {
+        background-color: rgba(245, 158, 11, 0.25);
+    }
+
+    /* Custom mechanic mentions - Orange */
+    .mention-custom_mechanic {
+        background-color: rgba(249, 115, 22, 0.15);
+        color: rgb(234, 88, 12);
+    }
+
+    .mention-custom_mechanic:hover {
+        background-color: rgba(249, 115, 22, 0.25);
+    }
+
+    /* Audio asset mentions - Pink */
+    .mention-audio_asset {
+        background-color: rgba(236, 72, 153, 0.15);
+        color: rgb(219, 39, 119);
+    }
+
+    .mention-audio_asset:hover {
+        background-color: rgba(236, 72, 153, 0.25);
+    }
+}
+
+/* Tippy tooltip styles */
+.tippy-box {
+    background-color: white;
+    color: #1f2937;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.tippy-box[data-placement^='top'] > .tippy-arrow::before {
+    op-color: white;
+}
+
+.tippy-box[data-placement^='bottom'] > .tippy-arrow::before {
+    border-bottom-color: white;
+}
+
+.tippy-box[data-placement^='left'] > .tippy-arrow::before {
+    border-left-color: white;
+}
+
+.tippy-box[data-placement^='right'] > .tippy-arrow::before {
+    border-right-color: white;
 }

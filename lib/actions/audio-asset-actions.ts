@@ -455,6 +455,8 @@ export async function getLinkedEntities(gameId: string, userId: string) {
       columns: {
         id: true,
         name: true,
+        description: true,
+        mechanics: true,
       },
       orderBy: (chars, { asc }) => [asc(chars.name)],
     });
@@ -464,6 +466,7 @@ export async function getLinkedEntities(gameId: string, userId: string) {
       columns: {
         id: true,
         name: true,
+        description: true,
       },
       orderBy: (s, { asc }) => [asc(s.name)],
     });
@@ -478,10 +481,34 @@ export async function getLinkedEntities(gameId: string, userId: string) {
       where: eq(schema.customGameMechanics.gameId, gameId),
     });
 
+    // Get audio assets for this game
+    const audioAssets = await db.query.gameAudioAssets.findMany({
+      where: eq(schema.gameAudioAssets.gameId, gameId),
+      columns: {
+        id: true,
+        name: true,
+        filename: true,
+        description: true,
+        linkedCharacters: true,
+        linkedScenes: true,
+        linkedMechanics: true,
+      },
+      orderBy: (assets, { asc }) => [asc(assets.name)],
+    });
+
     return {
       success: true,
-      characters: characters.map(c => ({ id: c.id, name: c.name })),
-      scenes: scenes.map(s => ({ id: s.id, name: s.name })),
+      characters: characters.map(c => ({
+        id: c.id,
+        name: c.name,
+        description: c.description,
+        mechanics: (c.mechanics as string[]) || [],
+      })),
+      scenes: scenes.map(s => ({
+        id: s.id,
+        name: s.name,
+        description: s.description,
+      })),
       mechanics: mechanics.map(m => m.name),
       customMechanics: customMechanics
         .filter(m => m.isSelected === "true")
@@ -490,6 +517,14 @@ export async function getLinkedEntities(gameId: string, userId: string) {
           name: m.name,
           description: m.description,
         })),
+      audioAssets: audioAssets.map(a => ({
+        id: a.id,
+        name: a.name || a.filename,
+        description: a.description,
+        linkedCharacters: (a.linkedCharacters as string[]) || [],
+        linkedScenes: (a.linkedScenes as string[]) || [],
+        linkedMechanics: (a.linkedMechanics as string[]) || [],
+      })),
     };
   } catch (error) {
     console.error("Error fetching linked entities:", error);

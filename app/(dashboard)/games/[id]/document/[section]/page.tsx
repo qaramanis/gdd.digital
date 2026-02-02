@@ -26,6 +26,8 @@ import {
 import type { AllSectionsContent } from "@/lib/ai/prompts";
 import { getUserPreferences } from "@/lib/actions/preferences-actions";
 import { fetchGamePageData } from "@/lib/actions/game-actions";
+import { getLinkedEntities } from "@/lib/actions/audio-asset-actions";
+import type { MentionData } from "@/lib/mentions/types";
 import { useUser } from "@/providers/user-context";
 import { SubSectionEditor } from "@/components/gdd/sub-section-editor";
 import { EnhanceButtons } from "@/components/gdd/enhance-buttons";
@@ -69,6 +71,7 @@ export default function GDDSectionPage() {
   const [comments, setComments] = useState<Record<string, GDDComment[]>>({});
   const [userRole, setUserRole] = useState<UserRole>("viewer");
   const [mechanicsData, setMechanicsData] = useState<MechanicData[]>([]);
+  const [mentionData, setMentionData] = useState<MentionData | null>(null);
 
   const contentRef = useRef<GDDSectionContent>({});
   const allSectionsRef = useRef<AllSectionsContent>({});
@@ -87,12 +90,13 @@ export default function GDDSectionPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [gameResult, allSectionsResult, prefsResult, commentsResult] =
+      const [gameResult, allSectionsResult, prefsResult, commentsResult, entitiesResult] =
         await Promise.all([
           fetchGamePageData(gameId, userId!),
           getAllGDDSections(gameId),
           getUserPreferences(userId!),
           getGDDSectionComments(gameId, sectionSlug),
+          getLinkedEntities(gameId, userId!),
         ]);
 
       if (gameResult.game) {
@@ -124,6 +128,16 @@ export default function GDDSectionPage() {
 
       if (commentsResult.success && commentsResult.comments) {
         setComments(commentsResult.comments);
+      }
+
+      if (entitiesResult.success) {
+        setMentionData({
+          characters: entitiesResult.characters || [],
+          scenes: entitiesResult.scenes || [],
+          mechanics: entitiesResult.mechanics || [],
+          customMechanics: entitiesResult.customMechanics || [],
+          audioAssets: entitiesResult.audioAssets || [],
+        });
       }
     } catch (error) {
       console.error("Error loading section data:", error);
@@ -407,6 +421,7 @@ export default function GDDSectionPage() {
               }}
               canEdit={canEdit}
               canComment={canComment}
+              mentionData={mentionData || undefined}
             />
           ))}
           {/* Dynamic mechanic subsections for gameplay-mechanics section */}
@@ -438,6 +453,7 @@ export default function GDDSectionPage() {
                   }}
                   canEdit={canEdit}
                   canComment={canComment}
+                  mentionData={mentionData || undefined}
                 />
               );
             })}

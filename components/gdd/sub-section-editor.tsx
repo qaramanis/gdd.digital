@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
+import { useRouter } from "next/navigation";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
+import tippy, { type Instance as TippyInstance } from "tippy.js";
 import { Button } from "@/components/ui/button";
 import {
   Loader2,
@@ -33,6 +35,15 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { CharacterList } from "@/components/gdd/character-list";
 import { AudioAssetList } from "@/components/gdd/audio-asset-list";
+import { createMentionExtension } from "@/lib/mentions/mention-extension";
+import {
+  type MentionData,
+  type MentionItem,
+  getMentionGroups,
+  filterMentionItems,
+  getEntityRoute,
+  type MentionEntityType,
+} from "@/lib/mentions/types";
 
 interface GameContext {
   name: string;
@@ -75,6 +86,8 @@ interface SubSectionEditorProps {
   // Permission props
   canEdit?: boolean;
   canComment?: boolean;
+  // Mention props
+  mentionData?: MentionData;
 }
 
 export function SubSectionEditor({
@@ -94,10 +107,13 @@ export function SubSectionEditor({
   onCommentsChange,
   canEdit = true,
   canComment = true,
+  mentionData,
 }: SubSectionEditorProps) {
+  const router = useRouter();
   const [generatedContent, setGeneratedContent] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
 
   // Comment state
   const [isCommentEditing, setIsCommentEditing] = useState(false);
@@ -110,6 +126,27 @@ export function SubSectionEditor({
   );
   const commentTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
+  // Use ref to store mention data so the extension always gets latest data
+  const mentionDataRef = useRef<MentionData | undefined>(mentionData);
+  useEffect(() => {
+    mentionDataRef.current = mentionData;
+  }, [mentionData]);
+
+  // Create mention extension with a getter that uses the ref
+  // This ensures the extension always gets the latest data even after async load
+  const mentionExtension = useMemo(() => {
+    return createMentionExtension({
+      getItems: (query: string): MentionItem[] => {
+        const data = mentionDataRef.current;
+        if (!data) return [];
+        const groups = getMentionGroups(data);
+        if (!groups.length) return [];
+        return filterMentionItems(groups, query).slice(0, 10);
+      },
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -121,6 +158,7 @@ export function SubSectionEditor({
           ? placeholder
           : "You do not have permission to edit this content",
       }),
+      mentionExtension,
     ],
     content: initialContent,
     editable: canEdit,
@@ -144,6 +182,188 @@ export function SubSectionEditor({
       toast.error("You do not have permission to edit this content");
     }
   }, [canEdit]);
+
+  // Handle mention click for navigation
+  const handleMentionClick = useCallback(
+    (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains("mention")) {
+        e.preventDefault();
+        e.stopPropagation();
+        const entityType = target.getAttribute("data-type") as MentionEntityType;
+        const entityId = target.getAttribute("data-id");
+        if (entityType && entityId) {
+          const route = getEntityRoute(gameId, entityType, entityId);
+          router.push(route);
+        }
+      }
+    },
+    [gameId, router]
+  );
+
+  // Helper to get entity type label
+  const getTypeLabel = (type: MentionEntityType): string => {
+    switch (type) {
+      case "character": return "Character";
+      case "scene": return "Scene";
+      case "mechanic": return "Mechanic";
+      case "custom_mechanic": return "Custom Mechanic";
+      case "audio_asset": return "Audio Asset";
+      default: return "Entity";
+    }
+  };
+
+  // Helper to get type color class
+  const getTypeColor = (type: MentionEntityType): string => {
+    switch (type) {
+      case "character": return "#7c3aed";
+      case "scene": return "#16a34a";
+      case "mechanic": return "#d97706";
+      case "custom_mechanic": return "#ea580c";
+      case "audio_asset": return "#db2777";
+      default: return "#6b7280";
+    }
+  };
+
+  // Helper to build tooltip content with entity details
+  const buildTooltipContent = (
+    entityType: MentionEntityType,
+    entityId: string,
+    entityName: string
+  ): string => {
+    const data = mentionDataRef.current;
+    let details: string[] = [];
+
+    if (data) {
+      if (entityType === "character") {
+        const char = data.characters.find((c) => c.id === entityId);
+        if (char) {
+          if (char.description) {
+            const desc = char.description.length > 80
+              ? char.description.slice(0, 80) + "..."
+              : char.description;
+            details.push(`<div style="font-size: 11px; color: #4b5563; margin-top: 4px;">${desc}</div>`);
+          }
+          if (char.mechanics && char.mechanics.length > 0) {
+            details.push(`<div style="font-size: 10px; color: #6b7280; margin-top: 4px;"><span style="color: #d97706;">Mechanics:</span> ${char.mechanics.slice(0, 3).join(", ")}${char.mechanics.length > 3 ? "..." : ""}</div>`);
+          }
+        }
+      } else if (entityType === "scene") {
+        const scene = data.scenes.find((s) => s.id === entityId);
+        if (scene?.description) {
+          const desc = scene.description.length > 80
+            ? scene.description.slice(0, 80) + "..."
+            : scene.description;
+          details.push(`<div style="font-size: 11px; color: #4b5563; margin-top: 4px;">${desc}</div>`);
+        }
+      } else if (entityType === "custom_mechanic") {
+        const mechanic = data.customMechanics.find((m) => m.id === entityId);
+        if (mechanic?.description) {
+          const desc = mechanic.description.length > 80
+            ? mechanic.description.slice(0, 80) + "..."
+            : mechanic.description;
+          details.push(`<div style="font-size: 11px; color: #4b5563; margin-top: 4px;">${desc}</div>`);
+        }
+      } else if (entityType === "audio_asset") {
+        const asset = data.audioAssets.find((a) => a.id === entityId);
+        if (asset) {
+          if (asset.description) {
+            const desc = asset.description.length > 80
+              ? asset.description.slice(0, 80) + "..."
+              : asset.description;
+            details.push(`<div style="font-size: 11px; color: #4b5563; margin-top: 4px;">${desc}</div>`);
+          }
+          const links: string[] = [];
+          if (asset.linkedCharacters && asset.linkedCharacters.length > 0) {
+            const charNames = asset.linkedCharacters
+              .map((id) => data.characters.find((c) => c.id === id)?.name)
+              .filter(Boolean)
+              .slice(0, 2);
+            if (charNames.length > 0) {
+              links.push(`<span style="color: #7c3aed;">Characters:</span> ${charNames.join(", ")}${asset.linkedCharacters.length > 2 ? "..." : ""}`);
+            }
+          }
+          if (asset.linkedScenes && asset.linkedScenes.length > 0) {
+            const sceneNames = asset.linkedScenes
+              .map((id) => data.scenes.find((s) => s.id === id)?.name)
+              .filter(Boolean)
+              .slice(0, 2);
+            if (sceneNames.length > 0) {
+              links.push(`<span style="color: #16a34a;">Scenes:</span> ${sceneNames.join(", ")}${asset.linkedScenes.length > 2 ? "..." : ""}`);
+            }
+          }
+          if (asset.linkedMechanics && asset.linkedMechanics.length > 0) {
+            links.push(`<span style="color: #d97706;">Mechanics:</span> ${asset.linkedMechanics.slice(0, 2).join(", ")}${asset.linkedMechanics.length > 2 ? "..." : ""}`);
+          }
+          if (links.length > 0) {
+            details.push(`<div style="font-size: 10px; color: #6b7280; margin-top: 4px;">${links.join("<br>")}</div>`);
+          }
+        }
+      }
+    }
+
+    return `
+      <div style="padding: 8px 12px; font-family: inherit; max-width: 280px;">
+        <div style="font-weight: 500; font-size: 13px; color: ${getTypeColor(entityType)};">
+          ${entityName}
+        </div>
+        <div style="font-size: 11px; color: #6b7280; margin-top: 2px;">
+          ${getTypeLabel(entityType)}
+        </div>
+        ${details.join("")}
+        <div style="font-size: 10px; color: #9ca3af; margin-top: 6px; padding-top: 6px; op: 1px solid #e5e7eb;">
+          Click to navigate
+        </div>
+      </div>
+    `;
+  };
+
+  // Set up tippy instances on mention elements
+  const tippyInstancesRef = useRef<TippyInstance[]>([]);
+
+  useEffect(() => {
+    const editorElement = editorRef.current;
+    if (!editorElement) return;
+
+    // Clean up existing tippy instances
+    tippyInstancesRef.current.forEach((instance) => instance.destroy());
+    tippyInstancesRef.current = [];
+
+    // Find all mention elements and attach tippy
+    const mentionElements = editorElement.querySelectorAll(".mention");
+
+    mentionElements.forEach((el) => {
+      const element = el as HTMLElement;
+      const entityType = element.getAttribute("data-type") as MentionEntityType;
+      const entityId = element.getAttribute("data-id") || "";
+      const entityName = element.textContent?.replace("@", "") || "";
+
+      if (!entityType) return;
+
+      const tooltipContent = buildTooltipContent(entityType, entityId, entityName);
+
+      const instance = tippy(element, {
+        content: tooltipContent,
+        allowHTML: true,
+        placement: "top",
+        trigger: "mouseenter",
+        interactive: false,
+        delay: [200, 0],
+        appendTo: document.body,
+      });
+
+      tippyInstancesRef.current.push(instance);
+    });
+
+    // Set up click handler
+    editorElement.addEventListener("click", handleMentionClick as EventListener);
+
+    return () => {
+      editorElement.removeEventListener("click", handleMentionClick as EventListener);
+      tippyInstancesRef.current.forEach((instance) => instance.destroy());
+      tippyInstancesRef.current = [];
+    };
+  }, [editor?.getHTML(), handleMentionClick]);
 
   const generateContent = useCallback(async () => {
     if (!editor) return;
@@ -571,6 +791,7 @@ export function SubSectionEditor({
 
       <div className="relative">
         <div
+          ref={editorRef}
           onClick={handleEditorClick}
           className={cn(
             "border rounded-lg bg-background transition-colors",
